@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+  <meta charset="UTF-8">
+  <title>Mobile Navigation Logger</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      background: #f4f4f4;
+    }
+
+    h1 {
+      font-size: 22px;
+    }
+
+    button {
+      padding: 12px;
+      margin: 5px;
+      font-size: 16px;
+      border: none;
+      border-radius: 6px;
+      background: #1f6feb;
+      color: white;
+    }
+
+    button.stop {
+      background: #d73a49;
+    }
+
+    button.download {
+      background: #2da44e;
+    }
+
+    #status {
+      margin-top: 15px;
+      padding: 10px;
+      background: white;
+      border-radius: 6px;
+    }
+
+    canvas {
+      margin-top: 20px;
+      background: white;
+      border: 1px solid #ccc;
+      width: 100%;
+      max-width: 500px;
+      height: 400px;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>Καταγραφή Κίνησης και Πλοήγησης</h1>
+
+  <button onclick="requestPermissions()">Άδεια αισθητήρων</button>
+  <button onclick="startRecording()">Έναρξη</button>
+  <button class="stop" onclick="stopRecording()">Παύση</button>
+  <button class="download" onclick="downloadCSV()">Λήψη CSV</button>
+  <button onclick="drawPath()">Εμφάνιση διαδρομής</button>
+
+  <div id="status">
+    Κατάσταση: Αναμονή
+  </div>
+
+  <canvas id="pathCanvas" width="500" height="400"></canvas>
+
+  <script>
+    let isRecording = false;
+    let data = [];
+
+    let currentMotion = {
+      ax: null,
+      ay: null,
+      az: null,
+      gx: null,
+      gy: null,
+      gz: null
+    };
+
+    let currentOrientation = {
+      alpha: null,
+      beta: null,
+      gamma: null
+    };
+
+    let currentPosition = {
+      latitude: null,
+      longitude: null,
+      accuracy: null
+    };
+
+    let estimatedPath = [];
+    let currentX = 250;
+    let currentY = 200;
+    let lastTimestamp = null;
+
+    async function requestPermissions() {
+      try {
+        if (typeof DeviceMotionEvent !== "undefined" &&
+            typeof DeviceMotionEvent.requestPermission === "function") {
+          const motionPermission = await DeviceMotionEvent.requestPermission();
+          console.log("Motion permission:", motionPermission);
+        }
+
+        if (typeof DeviceOrientationEvent !== "undefined" &&
+            typeof DeviceOrientationEvent.requestPermission === "function") {
+          const orientationPermission = await DeviceOrientationEvent.requestPermission();
+          console.log("Orientation permission:", orientationPermission);
+        }
+
+        document.getElementById("status").innerHTML =
+          "Κατάσταση: Οι άδειες ζητήθηκαν επιτυχώς.";
+      } catch (error) {
+        document.getElementById("status").innerHTML =
+          "Σφάλμα αδειών: " + error;
+      }
+    }
+
+    function startRecording() {
+      isRecording = true;
+      lastTimestamp = Date.now();
+      estimatedPath = [];
+      estimatedPath.push({ x: currentX, y: currentY });
+
+      window.addEventListener("devicemotion", handleMotion);
+      window.addEventListener("deviceorientation", handleOrientation);
+
+      if ("geolocation" in navigator) {
+        navigator.geolocation.watchPosition(
+          handleGPS,
+          handleGPSError,
+          {
+            enableHighAccuracy: true,
+            maximumAge: 1000,
+            timeout: 5000
+          }
+        );
+      }
+
+      setInterval(recordSample, 200);
+
+      document.getElementById("status").innerHTML =
+        "Κατάσταση: Καταγραφή σε εξέλιξη";
+    }
+
+    function stopRecording() {
+      isRecording = false;
+      document.getElementById("status").innerHTML =
+        "Κατάσταση: Η καταγραφή σταμάτησε. Δείγματα: " + data.length;
+    }
+
+    function handleMotion(event) {
+      if (!isRecording) return;
+
+      if (event.accelerationIncludingGravity) {
+        currentMotion.ax = event.accelerationIncludingGravity.x;
+        currentMotion.ay = event.accelerationIncludingGravity.y;
+        currentMotion.az = event.accelerationIncludingGravity.z;
+      }
+
+      if (event.rotationRate) {
+        currentMotion.gx = event.rotationRate.alpha;
+        currentMotion.gy = event.rotationRate.beta;
+        currentMotion.gz = event.rotationRate.gamma;
+      }
+    }
+
+    function handleOrientation(event) {
+      if (!isRecording) return;
+
+      currentOrientation.alpha = event.alpha;
+      currentOrientation.beta = event.beta;
+      currentOrientation.gamma = event.gamma;
+    }
+
+    function handleGPS(position) {
+      currentPosition.latitude = position.coords.latitude;
+      currentPosition.longitude = position.coords.longitude;
+      currentPosition.accuracy = position.coords.accuracy;
+    }
+
+    function handleGPSError(error) {
+      console.log("GPS error:", error.message);
+    }
+
+    function recordSample() {
+      if (!isRecording) return;
+
+      const now = Date.now();
+
+      const ax = currentMotion.ax ?? 0;
+      const ay = currentMotion.ay ?? 0;
+      const az = currentMotion.az ?? 0;
+
+      const accelerationMagnitude = Math.sqrt(ax * ax + ay * ay + az * az);
+
+      const alpha = currentOrientation.alpha ?? 0;
+
+      updateEstimatedPath(accelerationMagnitude, alpha);
+
+      const sample = {
+        timestamp: now,
+        ax: ax,
+        ay: ay,
+        az: az,
+        accelerationMagnitude: accelerationMagnitude,
+        gx: currentMotion.gx ?? 0,
+        gy: currentMotion.gy ?? 0,
+        gz: currentMotion.gz ?? 0,
+        alpha: currentOrientation.alpha ?? 0,
+        beta: currentOrientation.beta ?? 0,
+        gamma: currentOrientation.gamma ?? 0,
+        latitude: currentPosition.latitude ?? "",
+        longitude: currentPosition.longitude ?? "",
+        accuracy: currentPosition.accuracy ?? "",
+        estimatedX: currentX,
+        estimatedY: currentY,
+        manualLabel: ""
+      };
+
+      data.push(sample);
+
+      document.getElementById("status").innerHTML =
+        "Κατάσταση: Καταγραφή σε εξέλιξη<br>" +
+        "Δείγματα: " + data.length + "<br>" +
+        "Επιτάχυνση: " + accelerationMagnitude.toFixed(2) + "<br>" +
+        "Κατεύθυνση: " + alpha.toFixed(2);
+    }
+
+    function updateEstimatedPath(accMag, headingDegrees) {
+      const now = Date.now();
+
+      if (!lastTimestamp) {
+        lastTimestamp = now;
+        return;
+      }
+
+      const dt = (now - lastTimestamp) / 1000.0;
+      lastTimestamp = now;
+
+      /*
+        Απλοποιημένη εκτίμηση:
+        Αν η επιτάχυνση αποκλίνει αρκετά από τη βαρύτητα,
+        θεωρούμε ότι υπάρχει κίνηση.
+      */
+      const movementIntensity = Math.abs(accMag - 9.81);
+
+      if (movementIntensity < 0.8) {
+        return;
+      }
+
+      const stepLength = 2.0; // σε pixels, όχι πραγματικά μέτρα
+      const headingRad = headingDegrees * Math.PI / 180.0;
+
+      currentX += stepLength * Math.sin(headingRad);
+      currentY -= stepLength * Math.cos(headingRad);
+
+      estimatedPath.push({
+        x: currentX,
+        y: currentY
+      });
+    }
+
+    function drawPath() {
+      const canvas = document.getElementById("pathCanvas");
+      const ctx = canvas.getContext("2d");
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      if (estimatedPath.length < 2) {
+        return;
+      }
+
+      ctx.beginPath();
+      ctx.moveTo(estimatedPath[0].x, estimatedPath[0].y);
+
+      for (let i = 1; i < estimatedPath.length; i++) {
+        ctx.lineTo(estimatedPath[i].x, estimatedPath[i].y);
+      }
+
+      ctx.strokeStyle = "#1f6feb";
+      ctx.lineWidth = 3;
+      ctx.stroke();
+
+      ctx.fillStyle = "green";
+      ctx.beginPath();
+      ctx.arc(estimatedPath[0].x, estimatedPath[0].y, 6, 0, 2 * Math.PI);
+      ctx.fill();
+
+      ctx.fillStyle = "red";
+      const last = estimatedPath[estimatedPath.length - 1];
+      ctx.beginPath();
+      ctx.arc(last.x, last.y, 6, 0, 2 * Math.PI);
+      ctx.fill();
+    }
+
+    function downloadCSV() {
+      if (data.length === 0) {
+        alert("Δεν υπάρχουν δεδομένα.");
+        return;
+      }
+
+      const headers = Object.keys(data[0]);
+      let csv = headers.join(",") + "\n";
+
+      data.forEach(row => {
+        csv += headers.map(h => row[h]).join(",") + "\n";
+      });
+
+      const blob = new Blob([csv], { type: "text/csv" });
+      const url = URL.createObjectURL(blob);
+
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "navigation_sensor_data.csv";
+      a.click();
+
+      URL.revokeObjectURL(url);
+    }
+  </script>
+</body>
+</html>
