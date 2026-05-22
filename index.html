@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <title>AI Room Navigator SOM</title>
+  <title>AI Intuition Room Navigator</title>
 
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3/dist/coco-ssd.min.js"></script>
@@ -12,9 +12,9 @@
   <style>
     :root {
       --bg: #050711;
-      --card: rgba(255,255,255,0.08);
-      --card2: rgba(255,255,255,0.13);
-      --border: rgba(255,255,255,0.16);
+      --panel: rgba(255, 255, 255, 0.08);
+      --panel2: rgba(255, 255, 255, 0.13);
+      --border: rgba(255, 255, 255, 0.16);
       --text: #f8fbff;
       --muted: #aab4cf;
       --blue: #36a3ff;
@@ -22,6 +22,7 @@
       --yellow: #ffd166;
       --red: #ff4d6d;
       --purple: #b388ff;
+      --orange: #ff9f1c;
     }
 
     * {
@@ -42,7 +43,7 @@
     }
 
     .app {
-      width: min(1320px, 100%);
+      width: min(1380px, 100%);
       margin: auto;
       padding: 18px;
     }
@@ -57,7 +58,7 @@
 
     h1 {
       margin: 0;
-      font-size: clamp(30px, 5vw, 54px);
+      font-size: clamp(30px, 5vw, 56px);
       letter-spacing: -2px;
       line-height: .96;
     }
@@ -65,7 +66,7 @@
     .subtitle {
       margin: 12px 0 0;
       color: var(--muted);
-      max-width: 760px;
+      max-width: 800px;
       line-height: 1.5;
     }
 
@@ -81,7 +82,7 @@
       border-radius: 999px;
       border: 1px solid var(--border);
       background: rgba(255,255,255,.09);
-      font-weight: 800;
+      font-weight: 900;
       color: var(--green);
       white-space: nowrap;
       box-shadow: 0 0 40px rgba(46,229,157,.12);
@@ -89,12 +90,12 @@
 
     .grid {
       display: grid;
-      grid-template-columns: 1.42fr .85fr;
+      grid-template-columns: 1.45fr .9fr;
       gap: 16px;
     }
 
     .card {
-      background: var(--card);
+      background: var(--panel);
       border: 1px solid var(--border);
       border-radius: 28px;
       padding: 16px;
@@ -144,7 +145,7 @@
       gap: 14px;
       padding: 16px;
       border-radius: 20px;
-      background: rgba(0,0,0,.7);
+      background: rgba(0,0,0,.72);
       border: 1px solid rgba(255,255,255,.18);
       backdrop-filter: blur(14px);
     }
@@ -171,11 +172,21 @@
       flex: 0 0 auto;
     }
 
-    .controls {
+    .controls,
+    .tag-grid,
+    .target-grid {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
       gap: 10px;
       margin-top: 14px;
+    }
+
+    .controls {
+      grid-template-columns: repeat(4, 1fr);
+    }
+
+    .tag-grid,
+    .target-grid {
+      grid-template-columns: repeat(5, 1fr);
     }
 
     button,
@@ -190,7 +201,8 @@
       text-align: center;
       background: linear-gradient(135deg, #1f6feb, var(--blue));
       box-shadow: 0 14px 30px rgba(31,111,235,.25);
-      transition: transform .15s ease, filter .15s ease;
+      transition: transform .15s ease, filter .15s ease, outline .15s ease;
+      user-select: none;
     }
 
     button:hover,
@@ -218,6 +230,15 @@
       background: linear-gradient(135deg, #6f42c1, var(--purple));
     }
 
+    button.orange {
+      background: linear-gradient(135deg, #d26900, var(--orange));
+    }
+
+    button.active {
+      outline: 3px solid white;
+      filter: brightness(1.18);
+    }
+
     input[type="file"] {
       display: none;
     }
@@ -230,7 +251,7 @@
     }
 
     .metric {
-      background: var(--card2);
+      background: var(--panel2);
       border: 1px solid var(--border);
       border-radius: 20px;
       padding: 13px;
@@ -244,13 +265,13 @@
     }
 
     .metric b {
-      font-size: 21px;
+      font-size: 20px;
     }
 
     .objects {
       display: grid;
       gap: 8px;
-      max-height: 170px;
+      max-height: 150px;
       overflow: auto;
       padding-right: 3px;
     }
@@ -272,7 +293,7 @@
 
     canvas.map {
       width: 100%;
-      height: 230px;
+      height: 220px;
       margin-top: 14px;
       border-radius: 20px;
       border: 1px solid var(--border);
@@ -297,6 +318,14 @@
       background: rgba(0,0,0,.3);
     }
 
+    .section-title {
+      margin: 18px 0 0;
+      color: var(--text);
+      font-size: 15px;
+      font-weight: 900;
+      letter-spacing: .02em;
+    }
+
     .note {
       margin-top: 12px;
       color: var(--muted);
@@ -309,7 +338,7 @@
       font-weight: 900;
     }
 
-    @media (max-width: 980px) {
+    @media (max-width: 1040px) {
       header {
         flex-direction: column;
       }
@@ -327,19 +356,21 @@
       }
     }
 
-    @media (max-width: 540px) {
+    @media (max-width: 620px) {
       .app {
         padding: 12px;
+      }
+
+      .controls,
+      .tag-grid,
+      .target-grid {
+        grid-template-columns: 1fr 1fr;
       }
 
       button,
       .file-btn {
         font-size: 13px;
         padding: 13px 9px;
-      }
-
-      .metrics {
-        grid-template-columns: 1fr 1fr;
       }
     }
   </style>
@@ -349,16 +380,17 @@
   <main class="app">
     <header>
       <div>
-        <h1>AI SOM Room Navigator</h1>
+        <h1>AI Intuition Room Navigator</h1>
         <p class="subtitle">
-          A fancy browser app for room learning: camera object detection, phone sensors,
-          efficient SOM memory, CSV export, and live navigation feedback.
+          Tag what you see and feel while walking. The app learns camera objects + phone sensors using
+          a Self-Organizing Map and a Random Forest, then navigates with learned “intuition”.
         </p>
       </div>
 
       <div class="badges">
         <div class="badge" id="aiBadge">AI: not loaded</div>
         <div class="badge" id="somBadge">SOM: empty</div>
+        <div class="badge" id="rfBadge">RF: empty</div>
       </div>
     </header>
 
@@ -372,7 +404,7 @@
             <div class="guidance">
               <div>
                 <strong id="guideTitle">READY</strong>
-                <span id="guideText">Camera → Load AI → Sensors → Learn Room → Train SOM.</span>
+                <span id="guideText">Camera → Load AI → Sensors → Learn Room → tag zones → Train Model.</span>
               </div>
               <div class="dot" id="dot"></div>
             </div>
@@ -387,12 +419,12 @@
 
           <button class="purple" onclick="startLearning()">Learn Room</button>
           <button class="warn" onclick="stopLearning()">Stop Learn</button>
-          <button onclick="trainSOM()">Train SOM</button>
-          <button onclick="saveSOM()">Save SOM</button>
+          <button onclick="trainCombinedModel()">Train SOM + RF</button>
+          <button onclick="saveCombinedModel()">Save Model</button>
 
           <label class="file-btn purple">
-            Load SOM
-            <input type="file" accept="application/json" onchange="loadSOM(this.files[0])" />
+            Load Model
+            <input type="file" accept="application/json" onchange="loadCombinedModel(this.files[0])" />
           </label>
 
           <button onclick="saveNavigationCSV()">Save CSV</button>
@@ -405,36 +437,67 @@
           <button class="danger" onclick="stopAll()">Stop All</button>
         </div>
 
+        <div class="section-title">Tag current place / object / sensor state while learning</div>
+        <div class="tag-grid" id="tagGrid">
+          <button class="tag-btn good" data-tag="safe_path" onclick="setActiveTag('safe_path')">Safe Path</button>
+          <button class="tag-btn orange" data-tag="door" onclick="setActiveTag('door')">Door</button>
+          <button class="tag-btn orange" data-tag="desk" onclick="setActiveTag('desk')">Desk</button>
+          <button class="tag-btn orange" data-tag="bed" onclick="setActiveTag('bed')">Bed</button>
+          <button class="tag-btn orange" data-tag="chair" onclick="setActiveTag('chair')">Chair</button>
+          <button class="tag-btn purple" data-tag="wall" onclick="setActiveTag('wall')">Wall</button>
+          <button class="tag-btn danger" data-tag="obstacle" onclick="setActiveTag('obstacle')">Obstacle</button>
+          <button class="tag-btn purple" data-tag="turn_left" onclick="setActiveTag('turn_left')">Turn Left</button>
+          <button class="tag-btn purple" data-tag="turn_right" onclick="setActiveTag('turn_right')">Turn Right</button>
+          <button class="tag-btn good" data-tag="goal" onclick="setActiveTag('goal')">Goal</button>
+        </div>
+
+        <div class="section-title">Choose navigation target after loading/training model</div>
+        <div class="target-grid" id="targetGrid">
+          <button class="target-btn" data-target="safe_path" onclick="setTarget('safe_path')">Go Safe Path</button>
+          <button class="target-btn" data-target="door" onclick="setTarget('door')">Go Door</button>
+          <button class="target-btn" data-target="desk" onclick="setTarget('desk')">Go Desk</button>
+          <button class="target-btn" data-target="bed" onclick="setTarget('bed')">Go Bed</button>
+          <button class="target-btn" data-target="goal" onclick="setTarget('goal')">Go Goal</button>
+        </div>
+
         <div class="log" id="log">Ready.</div>
 
         <p class="note">
-          iPhone workflow: Safari → GitHub Pages HTTPS URL → allow Camera in Settings.
-          Then use: Camera → Load AI → Sensors → Learn Room → Train SOM.
+          During learning, walk slowly and tap tags as you pass objects/zones. For example:
+          tap <b>Door</b> when facing the door, <b>Obstacle</b> near blocked areas, and <b>Safe Path</b> on good walking routes.
         </p>
       </section>
 
       <aside class="card">
-        <h2 style="margin-top:0">Navigation Panel</h2>
+        <h2 style="margin-top:0">Intuition Panel</h2>
 
         <div class="metrics">
           <div class="metric"><small>Objects</small><b id="objectCount">0</b></div>
           <div class="metric"><small>Risk</small><b id="riskLevel">LOW</b></div>
           <div class="metric"><small>Heading</small><b id="heading">0°</b></div>
           <div class="metric"><small>Samples</small><b id="sampleCount">0</b></div>
+
           <div class="metric"><small>Learning</small><b id="learnCount">0</b></div>
-          <div class="metric"><small>Familiarity</small><b id="familiarity">—</b></div>
+          <div class="metric"><small>Current Tag</small><b id="activeTagBox">none</b></div>
+
+          <div class="metric"><small>Target</small><b id="targetBox">none</b></div>
+          <div class="metric"><small>RF Prediction</small><b id="rfPrediction">—</b></div>
+
+          <div class="metric"><small>RF Confidence</small><b id="rfConfidence">—</b></div>
+          <div class="metric"><small>SOM Familiarity</small><b id="familiarity">—</b></div>
+
           <div class="metric"><small>SOM Error</small><b id="somError">—</b></div>
           <div class="metric"><small>SOM Hits</small><b id="somHits">—</b></div>
         </div>
 
         <div class="objects" id="objects"></div>
 
-        <canvas id="pathCanvas" class="map" width="500" height="230"></canvas>
-        <canvas id="somCanvas" class="map" width="500" height="230"></canvas>
+        <canvas id="pathCanvas" class="map" width="500" height="220"></canvas>
+        <canvas id="somCanvas" class="map" width="500" height="220"></canvas>
 
         <p class="note">
           <span class="red">Experimental:</span>
-          This recognizes learned room states. It is not certified navigation and does not measure true depth.
+          The app learns patterns, not exact depth. Use it only as a prototype.
         </p>
       </aside>
     </section>
@@ -557,7 +620,7 @@
       }
 
       async train(samples, onProgress) {
-        if (!samples.length) throw new Error("No training samples.");
+        if (!samples.length) throw new Error("No SOM samples.");
 
         const prepared = this.prepareSamples(samples);
 
@@ -571,6 +634,7 @@
               total: this.iterations,
               progress: iteration / this.iterations
             });
+
             await new Promise(resolve => setTimeout(resolve, 0));
           }
         }
@@ -647,7 +711,11 @@
         const baseline = Math.max(this.quantizationError, 0.001);
 
         let familiarity = Math.exp(-bmu.distance / baseline);
-        if (this.hits[bmu.index] === 0) familiarity *= 0.55;
+
+        if (this.hits[bmu.index] === 0) {
+          familiarity *= 0.55;
+        }
+
         familiarity = clamp(familiarity, 0, 1);
 
         return {
@@ -663,7 +731,7 @@
 
       toJSON() {
         return {
-          version: 3,
+          version: 4,
           width: this.width,
           height: this.height,
           inputSize: this.inputSize,
@@ -706,6 +774,289 @@
       }
     }
 
+    class DecisionTree {
+      constructor(options = {}) {
+        this.maxDepth = options.maxDepth ?? 8;
+        this.minSamplesSplit = options.minSamplesSplit ?? 4;
+        this.featureSubsetSize = options.featureSubsetSize ?? 5;
+        this.root = null;
+        this.labels = [];
+      }
+
+      train(samples, labels) {
+        this.labels = labels.slice();
+        this.root = this.build(samples, 0);
+      }
+
+      build(samples, depth) {
+        const counts = this.countLabels(samples);
+        const majority = this.majorityLabel(counts);
+
+        if (
+          depth >= this.maxDepth ||
+          samples.length < this.minSamplesSplit ||
+          Object.keys(counts).length === 1
+        ) {
+          return {
+            leaf: true,
+            label: majority,
+            counts
+          };
+        }
+
+        const split = this.bestSplit(samples);
+
+        if (!split) {
+          return {
+            leaf: true,
+            label: majority,
+            counts
+          };
+        }
+
+        return {
+          leaf: false,
+          feature: split.feature,
+          threshold: split.threshold,
+          label: majority,
+          counts,
+          left: this.build(split.left, depth + 1),
+          right: this.build(split.right, depth + 1)
+        };
+      }
+
+      bestSplit(samples) {
+        const inputSize = samples[0].vector.length;
+        const features = this.randomFeatures(inputSize, this.featureSubsetSize);
+
+        let best = null;
+        let bestScore = Infinity;
+
+        for (const feature of features) {
+          const values = samples.map(s => s.vector[feature]).sort((a, b) => a - b);
+          const thresholds = [];
+
+          for (let i = 1; i < values.length; i += Math.max(1, Math.floor(values.length / 8))) {
+            thresholds.push((values[i - 1] + values[i]) / 2);
+          }
+
+          for (const threshold of thresholds) {
+            const left = [];
+            const right = [];
+
+            for (const sample of samples) {
+              if (sample.vector[feature] <= threshold) left.push(sample);
+              else right.push(sample);
+            }
+
+            if (left.length === 0 || right.length === 0) continue;
+
+            const score =
+              (left.length / samples.length) * this.gini(left) +
+              (right.length / samples.length) * this.gini(right);
+
+            if (score < bestScore) {
+              bestScore = score;
+              best = {
+                feature,
+                threshold,
+                left,
+                right
+              };
+            }
+          }
+        }
+
+        return best;
+      }
+
+      randomFeatures(inputSize, count) {
+        const all = [];
+
+        for (let i = 0; i < inputSize; i++) {
+          all.push(i);
+        }
+
+        shuffle(all);
+
+        return all.slice(0, Math.min(count, inputSize));
+      }
+
+      gini(samples) {
+        const counts = this.countLabels(samples);
+        let impurity = 1;
+
+        for (const label of Object.keys(counts)) {
+          const p = counts[label] / samples.length;
+          impurity -= p * p;
+        }
+
+        return impurity;
+      }
+
+      countLabels(samples) {
+        const counts = {};
+
+        for (const sample of samples) {
+          counts[sample.label] = (counts[sample.label] || 0) + 1;
+        }
+
+        return counts;
+      }
+
+      majorityLabel(counts) {
+        let bestLabel = "";
+        let bestCount = -1;
+
+        for (const label of Object.keys(counts)) {
+          if (counts[label] > bestCount) {
+            bestLabel = label;
+            bestCount = counts[label];
+          }
+        }
+
+        return bestLabel;
+      }
+
+      predict(vector) {
+        let node = this.root;
+
+        while (node && !node.leaf) {
+          if (vector[node.feature] <= node.threshold) {
+            node = node.left;
+          } else {
+            node = node.right;
+          }
+        }
+
+        return node ? node.label : "";
+      }
+
+      toJSON() {
+        return {
+          maxDepth: this.maxDepth,
+          minSamplesSplit: this.minSamplesSplit,
+          featureSubsetSize: this.featureSubsetSize,
+          labels: this.labels,
+          root: this.root
+        };
+      }
+
+      static fromJSON(json) {
+        const tree = new DecisionTree({
+          maxDepth: json.maxDepth,
+          minSamplesSplit: json.minSamplesSplit,
+          featureSubsetSize: json.featureSubsetSize
+        });
+
+        tree.labels = json.labels || [];
+        tree.root = json.root;
+
+        return tree;
+      }
+    }
+
+    class RandomForestClassifier {
+      constructor(options = {}) {
+        this.treeCount = options.treeCount ?? 35;
+        this.maxDepth = options.maxDepth ?? 8;
+        this.minSamplesSplit = options.minSamplesSplit ?? 4;
+        this.featureSubsetSize = options.featureSubsetSize ?? 5;
+        this.trees = [];
+        this.labels = [];
+      }
+
+      train(samples) {
+        if (!samples.length) {
+          throw new Error("No RF samples.");
+        }
+
+        this.labels = Array.from(new Set(samples.map(s => s.label)));
+        this.trees = [];
+
+        for (let i = 0; i < this.treeCount; i++) {
+          const bootstrap = this.bootstrap(samples);
+
+          const tree = new DecisionTree({
+            maxDepth: this.maxDepth,
+            minSamplesSplit: this.minSamplesSplit,
+            featureSubsetSize: this.featureSubsetSize
+          });
+
+          tree.train(bootstrap, this.labels);
+          this.trees.push(tree);
+        }
+      }
+
+      bootstrap(samples) {
+        const output = [];
+
+        for (let i = 0; i < samples.length; i++) {
+          output.push(samples[Math.floor(Math.random() * samples.length)]);
+        }
+
+        return output;
+      }
+
+      predict(vector) {
+        if (!this.trees.length) {
+          return {
+            label: "",
+            confidence: 0,
+            votes: {}
+          };
+        }
+
+        const votes = {};
+
+        for (const tree of this.trees) {
+          const label = tree.predict(vector);
+          votes[label] = (votes[label] || 0) + 1;
+        }
+
+        let bestLabel = "";
+        let bestVotes = -1;
+
+        for (const label of Object.keys(votes)) {
+          if (votes[label] > bestVotes) {
+            bestLabel = label;
+            bestVotes = votes[label];
+          }
+        }
+
+        return {
+          label: bestLabel,
+          confidence: bestVotes / this.trees.length,
+          votes
+        };
+      }
+
+      toJSON() {
+        return {
+          treeCount: this.treeCount,
+          maxDepth: this.maxDepth,
+          minSamplesSplit: this.minSamplesSplit,
+          featureSubsetSize: this.featureSubsetSize,
+          labels: this.labels,
+          trees: this.trees.map(tree => tree.toJSON())
+        };
+      }
+
+      static fromJSON(json) {
+        const forest = new RandomForestClassifier({
+          treeCount: json.treeCount,
+          maxDepth: json.maxDepth,
+          minSamplesSplit: json.minSamplesSplit,
+          featureSubsetSize: json.featureSubsetSize
+        });
+
+        forest.labels = json.labels || [];
+        forest.trees = (json.trees || []).map(treeJSON => DecisionTree.fromJSON(treeJSON));
+
+        return forest;
+      }
+    }
+
     const video = document.getElementById("video");
     const overlay = document.getElementById("overlay");
     const octx = overlay.getContext("2d");
@@ -718,6 +1069,8 @@
 
     const aiBadge = document.getElementById("aiBadge");
     const somBadge = document.getElementById("somBadge");
+    const rfBadge = document.getElementById("rfBadge");
+
     const guideTitle = document.getElementById("guideTitle");
     const guideText = document.getElementById("guideText");
     const dot = document.getElementById("dot");
@@ -728,6 +1081,10 @@
     const headingBox = document.getElementById("heading");
     const sampleCount = document.getElementById("sampleCount");
     const learnCount = document.getElementById("learnCount");
+    const activeTagBox = document.getElementById("activeTagBox");
+    const targetBox = document.getElementById("targetBox");
+    const rfPredictionBox = document.getElementById("rfPrediction");
+    const rfConfidenceBox = document.getElementById("rfConfidence");
     const familiarityBox = document.getElementById("familiarity");
     const somErrorBox = document.getElementById("somError");
     const somHitsBox = document.getElementById("somHits");
@@ -752,8 +1109,14 @@
     let predictions = [];
     let navRows = [];
     let learnRows = [];
+
     let som = null;
+    let forest = null;
     let latestSom = null;
+    let latestForest = null;
+
+    let activeTag = "unlabeled";
+    let targetTag = "";
 
     let lastSpoken = 0;
     let lastTime = null;
@@ -763,14 +1126,14 @@
 
     const FEATURE_SIZE = 17;
     const SMOOTH_ALPHA = 0.22;
-    const MIN_LEARN_DISTANCE = 0.12;
+    const MIN_LEARN_DISTANCE = 0.10;
 
     let motion = { ax: 0, ay: 0, az: 0, gx: 0, gy: 0, gz: 0 };
     let orient = { alpha: 0, beta: 0, gamma: 0 };
     let gps = { latitude: "", longitude: "", accuracy: "" };
 
     let currentX = 250;
-    let currentY = 115;
+    let currentY = 110;
     let path = [{ x: currentX, y: currentY }];
 
     const riskObjects = new Set([
@@ -784,20 +1147,22 @@
     function init() {
       drawPath();
       drawSOM();
-      logSet("Ready.\nOpen this from HTTPS GitHub Pages, not GitHub file preview.");
+      updateTagUI();
+      updateTargetUI();
+      logSet("Ready.\nUse HTTPS GitHub Pages, not the GitHub file preview.");
       checkSystem();
     }
 
-    function log(msg) {
+    function log(message) {
       const time = new Date().toLocaleTimeString();
-      logBox.textContent += "\n[" + time + "] " + msg;
+      logBox.textContent += "\n[" + time + "] " + message;
       logBox.scrollTop = logBox.scrollHeight;
-      console.log(msg);
+      console.log(message);
     }
 
-    function logSet(msg) {
-      logBox.textContent = msg;
-      console.log(msg);
+    function logSet(message) {
+      logBox.textContent = message;
+      console.log(message);
     }
 
     function checkSystem() {
@@ -908,11 +1273,48 @@
           log("Orientation permission not required.");
         }
 
-        setGuide("SENSORS READY", "You can now learn the room.", "safe");
+        setGuide("SENSORS READY", "Start learning and tag the room.", "safe");
       } catch (error) {
         setGuide("SENSOR ERROR", error.message, "warning");
         log("Sensor error: " + error.message);
       }
+    }
+
+    function setActiveTag(tag) {
+      activeTag = tag;
+      activeTagBox.textContent = tag;
+      updateTagUI();
+
+      if ("vibrate" in navigator) {
+        navigator.vibrate(40);
+      }
+
+      log("Active learning tag: " + tag);
+    }
+
+    function setTarget(tag) {
+      targetTag = tag;
+      targetBox.textContent = tag;
+      updateTargetUI();
+
+      if ("vibrate" in navigator) {
+        navigator.vibrate(40);
+      }
+
+      setGuide("TARGET SET", "Navigate toward learned tag: " + tag, "safe");
+      log("Navigation target: " + tag);
+    }
+
+    function updateTagUI() {
+      document.querySelectorAll(".tag-btn").forEach(button => {
+        button.classList.toggle("active", button.dataset.tag === activeTag);
+      });
+    }
+
+    function updateTargetUI() {
+      document.querySelectorAll(".target-btn").forEach(button => {
+        button.classList.toggle("active", button.dataset.target === targetTag);
+      });
     }
 
     function startDetection() {
@@ -983,6 +1385,28 @@
     }
 
     function updateDecision() {
+      const obstacleDecision = getObstacleDecision();
+      const intuitionDecision = getIntuitionDecision();
+
+      let finalDecision = obstacleDecision;
+
+      if (obstacleDecision.level !== "HIGH" && intuitionDecision) {
+        finalDecision = intuitionDecision;
+      }
+
+      if (obstacleDecision.level === "MEDIUM" && intuitionDecision && intuitionDecision.level === "LOW") {
+        finalDecision = obstacleDecision;
+      }
+
+      riskLevel.textContent = finalDecision.level;
+      setGuide(finalDecision.title, finalDecision.text, finalDecision.type);
+
+      if (navigating || learning) {
+        speak(finalDecision.speak, finalDecision.level);
+      }
+    }
+
+    function getObstacleDecision() {
       const vw = video.videoWidth || 1;
       const vh = video.videoHeight || 1;
       const area = vw * vh;
@@ -1006,14 +1430,13 @@
         const risky = riskObjects.has(p.class);
 
         if (risky && centered && low && ratio > 0.18) {
-          decision = {
+          return {
             level: "HIGH",
             title: "STOP",
             text: p.class + " directly ahead.",
             type: "danger",
             speak: p.class + " ahead. Stop."
           };
-          break;
         }
 
         if (risky && centered && ratio > 0.08) {
@@ -1027,34 +1450,98 @@
         }
       }
 
-      const somDecision = evaluateSOM();
+      return decision;
+    }
 
-      if (somDecision && decision.level !== "HIGH") {
-        if (somDecision.status === "UNKNOWN") {
-          decision = {
-            level: "MEDIUM",
-            title: "CAREFUL",
-            text: "Unfamiliar room state. Familiarity: " + somDecision.familiarity.toFixed(2),
-            type: "warning",
-            speak: "Careful. Unfamiliar room state."
-          };
-        }
+    function getIntuitionDecision() {
+      const vector = smoothedVector();
 
-        if (somDecision.status === "RISKY_ZONE") {
-          decision = {
+      let somDecision = null;
+
+      if (som) {
+        latestSom = som.predict(vector);
+
+        familiarityBox.textContent = latestSom.familiarity.toFixed(2);
+        somHitsBox.textContent = String(latestSom.hits);
+        somErrorBox.textContent = som.quantizationError.toFixed(3);
+
+        drawSOM();
+
+        if (latestSom.averageRisk > 0.65 && latestSom.hits > 0) {
+          somDecision = {
             level: "HIGH",
             title: "STOP",
-            text: "This zone was learned as risky.",
+            text: "This area was learned as risky.",
             type: "danger",
-            speak: "Stop. Learned risky zone."
+            speak: "Stop. Learned risky area."
+          };
+        } else if (latestSom.familiarity < 0.35 || latestSom.hits === 0) {
+          somDecision = {
+            level: "MEDIUM",
+            title: "SCAN",
+            text: "Unfamiliar state. Rotate slowly to recognize the room.",
+            type: "warning",
+            speak: "Unfamiliar area. Scan slowly."
           };
         }
       }
 
-      riskLevel.textContent = decision.level;
-      setGuide(decision.title, decision.text, decision.type);
+      if (forest) {
+        latestForest = forest.predict(vector);
 
-      if (navigating || learning) speak(decision.speak, decision.level);
+        rfPredictionBox.textContent = latestForest.label || "—";
+        rfConfidenceBox.textContent = latestForest.confidence.toFixed(2);
+
+        if (latestForest.label === "obstacle" && latestForest.confidence > 0.45) {
+          return {
+            level: "HIGH",
+            title: "STOP",
+            text: "Random Forest predicts obstacle zone.",
+            type: "danger",
+            speak: "Stop. Obstacle zone."
+          };
+        }
+
+        if (targetTag) {
+          if (latestForest.label === targetTag && latestForest.confidence > 0.45) {
+            return {
+              level: "LOW",
+              title: "ARRIVED",
+              text: "RF recognizes target: " + targetTag,
+              type: "safe",
+              speak: "Target recognized. You are near " + targetTag
+            };
+          }
+
+          if (latestForest.confidence < 0.35) {
+            return {
+              level: "MEDIUM",
+              title: "LOOK AROUND",
+              text: "Low confidence. Rotate slowly to find learned target.",
+              type: "warning",
+              speak: "Look around slowly."
+            };
+          }
+
+          return {
+            level: "LOW",
+            title: "FORWARD",
+            text: "Current state: " + latestForest.label + ". Target: " + targetTag + ". Move slowly.",
+            type: "safe",
+            speak: "Move slowly toward learned path."
+          };
+        }
+
+        return {
+          level: "LOW",
+          title: "RECOGNIZED",
+          text: "RF predicts: " + latestForest.label + " with confidence " + latestForest.confidence.toFixed(2),
+          type: "safe",
+          speak: "Recognized " + latestForest.label
+        };
+      }
+
+      return somDecision;
     }
 
     function startNavigation() {
@@ -1071,7 +1558,7 @@
 
       startDetection();
 
-      setGuide("NAVIGATING", "Using detection and SOM memory if loaded.", "safe");
+      setGuide("NAVIGATING", "Using object detection + SOM + Random Forest if loaded.", "safe");
       log("Navigation started.");
     }
 
@@ -1098,13 +1585,13 @@
 
       startDetection();
 
-      setGuide("LEARNING ROOM", "Walk slowly. Useful samples will be stored.", "safe");
-      log("Learning started.");
+      setGuide("LEARNING", "Walk slowly and tap tag buttons.", "safe");
+      log("Learning started. Active tag: " + activeTag);
     }
 
     function stopLearning() {
       learning = false;
-      setGuide("LEARNING STOPPED", "Samples: " + learnRows.length, "warning");
+      setGuide("LEARNING STOPPED", "Tagged samples: " + learnRows.length, "warning");
       log("Learning stopped. Samples: " + learnRows.length);
     }
 
@@ -1220,7 +1707,9 @@
         else if (cx > vw * 0.66) right = Math.max(right, score);
         else center = Math.max(center, score);
 
-        if (p.class in classes) classes[p.class] = Math.max(classes[p.class], p.score);
+        if (p.class in classes) {
+          classes[p.class] = Math.max(classes[p.class], p.score);
+        }
       }
 
       return [
@@ -1300,6 +1789,7 @@
 
       navRows.push({
         timestamp: now,
+        tag: activeTag,
         ax: motion.ax,
         ay: motion.ay,
         az: motion.az,
@@ -1316,16 +1806,19 @@
         estimatedY: currentY,
         riskLevel: riskText,
         detectedObjects,
+        rfPrediction: latestForest ? latestForest.label : "",
+        rfConfidence: latestForest ? latestForest.confidence : "",
         somFamiliarity: latestSom ? latestSom.familiarity : "",
         somX: latestSom ? latestSom.x : "",
         somY: latestSom ? latestSom.y : "",
         featureVector: vector.join("|")
       });
 
-      if (learning && usefulSample(vector)) {
+      if (learning && activeTag !== "unlabeled" && usefulSample(vector)) {
         learnRows.push({
           timestamp: now,
           vector,
+          label: activeTag,
           riskScore,
           estimatedX: currentX,
           estimatedY: currentY,
@@ -1339,19 +1832,28 @@
       sampleCount.textContent = navRows.length;
     }
 
-    async function trainSOM() {
+    async function trainCombinedModel() {
       if (training) return log("Training already running.");
 
-      if (learnRows.length < 50) {
-        setGuide("MORE DATA", "Collect at least 50 useful learning samples.", "warning");
-        return log("Not enough samples: " + learnRows.length);
+      const labeledSamples = learnRows.filter(row => row.label && row.label !== "unlabeled");
+
+      if (labeledSamples.length < 50) {
+        setGuide("MORE DATA", "Collect at least 50 tagged learning samples.", "warning");
+        return log("Not enough tagged samples: " + labeledSamples.length);
+      }
+
+      const labelCounts = countByLabel(labeledSamples);
+
+      if (Object.keys(labelCounts).length < 2) {
+        setGuide("MORE TAGS", "Use at least two different tag buttons.", "warning");
+        return log("Need at least two tag classes.");
       }
 
       training = true;
 
       try {
-        const size = chooseSize(learnRows.length);
-        const iterations = Math.min(3200, Math.max(900, learnRows.length * 12));
+        const size = chooseSize(labeledSamples.length);
+        const iterations = Math.min(3200, Math.max(900, labeledSamples.length * 12));
 
         som = new EfficientSOM(size.width, size.height, FEATURE_SIZE, {
           learningRate: 0.35,
@@ -1362,37 +1864,67 @@
         });
 
         setGuide("TRAINING SOM", "0% complete", "warning");
-        log("Training SOM: " + size.width + "x" + size.height + ", samples: " + learnRows.length);
+        log("Training SOM: " + size.width + "x" + size.height + ", samples: " + labeledSamples.length);
 
         let lastPercent = -1;
 
-        const result = await som.train(learnRows, info => {
+        const somResult = await som.train(labeledSamples, info => {
           const percent = Math.round(info.progress * 100);
 
           if (percent !== lastPercent && percent % 10 === 0) {
             lastPercent = percent;
             setGuide("TRAINING SOM", percent + "% complete", "warning");
-            log("Training: " + percent + "%");
+            log("SOM training: " + percent + "%");
           }
         });
 
         somBadge.textContent = "SOM: ready";
         somBadge.style.color = "var(--green)";
-        somErrorBox.textContent = result.quantizationError.toFixed(3);
+        somErrorBox.textContent = somResult.quantizationError.toFixed(3);
+
+        setGuide("TRAINING RF", "Building Random Forest intuition...", "warning");
+        log("Training Random Forest with labels: " + JSON.stringify(labelCounts));
+
+        forest = new RandomForestClassifier({
+          treeCount: 35,
+          maxDepth: 8,
+          minSamplesSplit: 4,
+          featureSubsetSize: 5
+        });
+
+        forest.train(labeledSamples);
+
+        rfBadge.textContent = "RF: ready";
+        rfBadge.style.color = "var(--green)";
 
         drawSOM();
 
-        setGuide("SOM READY", "Error: " + result.quantizationError.toFixed(3), "safe");
-        log("SOM trained. Quantization error: " + result.quantizationError.toFixed(4));
+        setGuide("MODEL READY", "SOM + Random Forest trained.", "safe");
+        log("Training complete. SOM error: " + somResult.quantizationError.toFixed(4));
       } catch (error) {
         som = null;
+        forest = null;
+
         somBadge.textContent = "SOM: failed";
         somBadge.style.color = "var(--red)";
-        setGuide("SOM ERROR", error.message, "danger");
+        rfBadge.textContent = "RF: failed";
+        rfBadge.style.color = "var(--red)";
+
+        setGuide("TRAIN ERROR", error.message, "danger");
         log("Training failed: " + error.message);
       } finally {
         training = false;
       }
+    }
+
+    function countByLabel(samples) {
+      const counts = {};
+
+      for (const sample of samples) {
+        counts[sample.label] = (counts[sample.label] || 0) + 1;
+      }
+
+      return counts;
     }
 
     function chooseSize(samples) {
@@ -1400,35 +1932,6 @@
       if (samples >= 400) return { width: 12, height: 12 };
       if (samples >= 150) return { width: 10, height: 10 };
       return { width: 8, height: 8 };
-    }
-
-    function evaluateSOM() {
-      if (!som) {
-        latestSom = null;
-        familiarityBox.textContent = "—";
-        somHitsBox.textContent = "—";
-        return null;
-      }
-
-      latestSom = som.predict(smoothedVector());
-
-      familiarityBox.textContent = latestSom.familiarity.toFixed(2);
-      somHitsBox.textContent = String(latestSom.hits);
-      somErrorBox.textContent = som.quantizationError.toFixed(3);
-
-      drawSOM();
-
-      let status = "KNOWN";
-
-      if (latestSom.familiarity < 0.35 || latestSom.hits === 0) status = "UNKNOWN";
-      else if (latestSom.familiarity < 0.55) status = "UNCERTAIN";
-
-      if (latestSom.averageRisk > 0.65 && latestSom.hits > 0) status = "RISKY_ZONE";
-
-      return {
-        status,
-        familiarity: latestSom.familiarity
-      };
     }
 
     function updatePath(accMag, headingDegrees) {
@@ -1567,29 +2070,38 @@
 
     function resetPath() {
       currentX = 250;
-      currentY = 115;
+      currentY = 110;
       path = [{ x: currentX, y: currentY }];
       lastTime = Date.now();
       drawPath();
       log("Path reset.");
     }
 
-    function saveSOM() {
-      if (!som) return alert("No trained SOM yet.");
+    function saveCombinedModel() {
+      if (!som || !forest) {
+        alert("Train SOM + RF first.");
+        return;
+      }
 
-      const blob = new Blob([
-        JSON.stringify({
-          createdAt: new Date().toISOString(),
-          samples: learnRows.length,
-          som: som.toJSON()
-        }, null, 2)
-      ], { type: "application/json" });
+      const payload = {
+        createdAt: new Date().toISOString(),
+        app: "AI Intuition Room Navigator",
+        featureSize: FEATURE_SIZE,
+        labels: Array.from(new Set(learnRows.map(row => row.label))),
+        samples: learnRows.length,
+        som: som.toJSON(),
+        forest: forest.toJSON()
+      };
 
-      downloadBlob(blob, "room_som_model.json");
-      log("SOM saved.");
+      const blob = new Blob([JSON.stringify(payload, null, 2)], {
+        type: "application/json"
+      });
+
+      downloadBlob(blob, "room_intuition_model_som_rf.json");
+      log("Combined SOM + RF model saved.");
     }
 
-    function loadSOM(file) {
+    function loadCombinedModel(file) {
       if (!file) return;
 
       const reader = new FileReader();
@@ -1597,18 +2109,32 @@
       reader.onload = event => {
         try {
           const payload = JSON.parse(event.target.result);
+
           som = EfficientSOM.fromJSON(payload.som);
+          forest = RandomForestClassifier.fromJSON(payload.forest);
 
           somBadge.textContent = "SOM: loaded";
           somBadge.style.color = "var(--green)";
+          rfBadge.textContent = "RF: loaded";
+          rfBadge.style.color = "var(--green)";
+
           somErrorBox.textContent = som.quantizationError.toFixed(3);
 
           drawSOM();
-          setGuide("SOM LOADED", "Room memory loaded.", "safe");
-          log("SOM loaded.");
+
+          setGuide("MODEL LOADED", "SOM + Random Forest intuition ready.", "safe");
+          log("Loaded combined model. Labels: " + JSON.stringify(payload.labels || forest.labels));
         } catch (error) {
+          som = null;
+          forest = null;
+
+          somBadge.textContent = "SOM: load failed";
+          somBadge.style.color = "var(--red)";
+          rfBadge.textContent = "RF: load failed";
+          rfBadge.style.color = "var(--red)";
+
           setGuide("LOAD FAILED", error.message, "danger");
-          log("SOM load failed: " + error.message);
+          log("Model load failed: " + error.message);
         }
       };
 
@@ -1617,7 +2143,7 @@
 
     function saveNavigationCSV() {
       if (!navRows.length) return alert("No navigation data.");
-      saveCSV(navRows, "ai_room_navigation_data.csv");
+      saveCSV(navRows, "ai_intuition_navigation_data.csv");
     }
 
     function saveLearningCSV() {
@@ -1625,6 +2151,7 @@
 
       const rows = learnRows.map(row => ({
         timestamp: row.timestamp,
+        label: row.label,
         estimatedX: row.estimatedX,
         estimatedY: row.estimatedY,
         riskLevel: row.riskLevel,
@@ -1633,7 +2160,7 @@
         vector: row.vector.join("|")
       }));
 
-      saveCSV(rows, "room_learning_samples.csv");
+      saveCSV(rows, "tagged_learning_samples.csv");
     }
 
     function saveCSV(rows, filename) {
@@ -1650,11 +2177,14 @@
     function downloadBlob(blob, filename) {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
+
       a.href = url;
       a.download = filename;
+
       document.body.appendChild(a);
       a.click();
       a.remove();
+
       URL.revokeObjectURL(url);
     }
 
@@ -1682,31 +2212,49 @@
       if (!speech || !("speechSynthesis" in window)) return;
 
       const now = Date.now();
-      const cooldown = level === "HIGH" ? 1600 : 3500;
+      const cooldown = level === "HIGH" ? 1500 : 3600;
 
       if (now - lastSpoken < cooldown) return;
 
       lastSpoken = now;
+
       window.speechSynthesis.cancel();
 
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.rate = 1;
       utterance.pitch = 1;
       utterance.volume = 1;
+
       window.speechSynthesis.speak(utterance);
     }
 
     function toggleSpeech() {
       speech = !speech;
       speechState.textContent = speech ? "ON" : "OFF";
-      if (!speech && "speechSynthesis" in window) window.speechSynthesis.cancel();
+
+      if (!speech && "speechSynthesis" in window) {
+        window.speechSynthesis.cancel();
+      }
+
       log("Speech: " + (speech ? "ON" : "OFF"));
     }
 
     function resizeOverlay() {
       const rect = overlay.getBoundingClientRect();
+
       overlay.width = Math.max(1, Math.round(rect.width));
       overlay.height = Math.max(1, Math.round(rect.height));
+    }
+
+    function shuffle(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        const temp = array[i];
+        array[i] = array[j];
+        array[j] = temp;
+      }
+
+      return array;
     }
 
     function clamp(value, min, max) {
