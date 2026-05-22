@@ -1,1008 +1,315 @@
 <!DOCTYPE html>
-<html lang="el">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <title>AI Room Navigator</title>
+  <title>AI Room Navigator Debug</title>
 
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3/dist/coco-ssd.min.js"></script>
 
   <style>
-    :root {
-      --bg: #070b18;
-      --panel: rgba(255, 255, 255, 0.08);
-      --panel-strong: rgba(255, 255, 255, 0.14);
-      --text: #f7f9ff;
-      --muted: #a7b0c8;
-      --blue: #39a7ff;
-      --green: #2ee59d;
-      --yellow: #ffd166;
-      --red: #ff4d6d;
-      --purple: #b388ff;
-      --border: rgba(255, 255, 255, 0.16);
-    }
-
     * {
       box-sizing: border-box;
     }
 
     body {
       margin: 0;
-      min-height: 100vh;
-      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      color: var(--text);
-      background:
-        radial-gradient(circle at top left, rgba(57, 167, 255, 0.28), transparent 34%),
-        radial-gradient(circle at bottom right, rgba(179, 136, 255, 0.22), transparent 34%),
-        linear-gradient(135deg, #060812, #11182f 60%, #060812);
-      overflow-x: hidden;
+      font-family: Arial, sans-serif;
+      background: #07111f;
+      color: white;
     }
 
     .app {
-      width: min(1240px, 100%);
-      margin: 0 auto;
-      padding: 24px;
+      max-width: 1000px;
+      margin: auto;
+      padding: 20px;
     }
 
-    header {
-      display: flex;
-      justify-content: space-between;
-      gap: 18px;
-      align-items: center;
-      margin-bottom: 20px;
+    h1 {
+      margin-top: 0;
     }
 
-    .title-block h1 {
-      margin: 0;
-      font-size: clamp(28px, 4vw, 46px);
-      letter-spacing: -0.04em;
-      line-height: 1;
+    .panel {
+      background: #101d33;
+      border: 1px solid #263b5f;
+      border-radius: 18px;
+      padding: 16px;
+      margin-bottom: 16px;
     }
 
-    .title-block p {
-      margin: 10px 0 0;
-      color: var(--muted);
-      max-width: 760px;
-    }
-
-    .badge {
-      padding: 10px 14px;
-      border: 1px solid var(--border);
-      background: var(--panel);
-      border-radius: 999px;
-      color: var(--green);
-      font-weight: 700;
-      box-shadow: 0 0 30px rgba(46, 229, 157, 0.12);
-      white-space: nowrap;
-    }
-
-    .grid {
-      display: grid;
-      grid-template-columns: 1.45fr 0.75fr;
-      gap: 18px;
-    }
-
-    .card {
-      background: var(--panel);
-      border: 1px solid var(--border);
-      border-radius: 24px;
-      padding: 18px;
-      box-shadow: 0 20px 70px rgba(0, 0, 0, 0.28);
-      backdrop-filter: blur(18px);
-    }
-
-    .camera-shell {
+    .video-wrap {
       position: relative;
-      overflow: hidden;
-      border-radius: 20px;
-      background: #000;
+      width: 100%;
       aspect-ratio: 16 / 10;
-      border: 1px solid var(--border);
+      background: black;
+      border-radius: 18px;
+      overflow: hidden;
+      border: 1px solid #263b5f;
     }
 
     video,
-    #overlayCanvas {
+    canvas {
       position: absolute;
       inset: 0;
       width: 100%;
       height: 100%;
-    }
-
-    video {
       object-fit: cover;
-      transform: scaleX(-1);
-    }
-
-    #overlayCanvas {
-      pointer-events: none;
-      transform: scaleX(-1);
-    }
-
-    .hud {
-      position: absolute;
-      left: 14px;
-      right: 14px;
-      bottom: 14px;
-      display: grid;
-      gap: 10px;
-    }
-
-    .guidance {
-      display: flex;
-      justify-content: space-between;
-      gap: 10px;
-      align-items: center;
-      padding: 14px;
-      border-radius: 16px;
-      background: rgba(0, 0, 0, 0.62);
-      border: 1px solid rgba(255, 255, 255, 0.16);
-      backdrop-filter: blur(14px);
-    }
-
-    .guidance strong {
-      font-size: clamp(18px, 3vw, 30px);
-    }
-
-    .guidance span {
-      color: var(--muted);
-      font-size: 13px;
-    }
-
-    .status-dot {
-      width: 18px;
-      height: 18px;
-      border-radius: 50%;
-      background: var(--green);
-      box-shadow: 0 0 25px var(--green);
-      flex: 0 0 auto;
-    }
-
-    .controls {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 10px;
-      margin-top: 14px;
     }
 
     button {
-      appearance: none;
+      padding: 13px 16px;
+      margin: 6px 6px 6px 0;
       border: 0;
-      border-radius: 14px;
-      padding: 13px 14px;
+      border-radius: 12px;
+      background: #1f6feb;
       color: white;
-      background: linear-gradient(135deg, #1f6feb, #39a7ff);
+      font-weight: bold;
       font-size: 15px;
-      font-weight: 800;
       cursor: pointer;
-      box-shadow: 0 12px 26px rgba(31, 111, 235, 0.25);
-      transition: transform 0.15s ease, filter 0.15s ease;
     }
 
-    button:hover {
-      transform: translateY(-1px);
-      filter: brightness(1.08);
+    button.green {
+      background: #238636;
     }
 
-    button:active {
-      transform: translateY(0);
+    button.red {
+      background: #da3633;
     }
 
-    button.stop {
-      background: linear-gradient(135deg, #d73a49, #ff4d6d);
-      box-shadow: 0 12px 26px rgba(255, 77, 109, 0.22);
+    #status {
+      white-space: pre-wrap;
+      background: #06101f;
+      border: 1px solid #263b5f;
+      padding: 12px;
+      border-radius: 12px;
+      line-height: 1.45;
     }
 
-    button.good {
-      background: linear-gradient(135deg, #168a5a, #2ee59d);
-      box-shadow: 0 12px 26px rgba(46, 229, 157, 0.2);
+    .ok {
+      color: #3fb950;
     }
 
-    button.purple {
-      background: linear-gradient(135deg, #6f42c1, #b388ff);
-      box-shadow: 0 12px 26px rgba(179, 136, 255, 0.2);
+    .bad {
+      color: #ff7b72;
     }
 
-    .metric-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-      margin-top: 14px;
-    }
-
-    .metric {
-      padding: 14px;
-      border-radius: 18px;
-      background: var(--panel-strong);
-      border: 1px solid var(--border);
-    }
-
-    .metric small {
-      display: block;
-      color: var(--muted);
-      margin-bottom: 8px;
-    }
-
-    .metric b {
-      font-size: 20px;
-    }
-
-    .object-list {
-      display: grid;
-      gap: 8px;
-      margin-top: 14px;
-      max-height: 220px;
-      overflow: auto;
-      padding-right: 4px;
-    }
-
-    .object-pill {
-      display: flex;
-      justify-content: space-between;
-      gap: 10px;
-      padding: 10px 12px;
-      border-radius: 14px;
-      background: rgba(255, 255, 255, 0.08);
-      border: 1px solid var(--border);
-      color: var(--text);
-    }
-
-    .object-pill em {
-      color: var(--muted);
-      font-style: normal;
-    }
-
-    #pathCanvas {
-      width: 100%;
-      height: 290px;
-      margin-top: 14px;
-      border-radius: 18px;
-      background:
-        linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px),
-        rgba(0, 0, 0, 0.24);
-      background-size: 24px 24px;
-      border: 1px solid var(--border);
-    }
-
-    .note {
-      margin-top: 14px;
-      color: var(--muted);
-      font-size: 13px;
-      line-height: 1.5;
-    }
-
-    .danger {
-      color: var(--red);
-      font-weight: 800;
-    }
-
-    @media (max-width: 900px) {
-      .grid {
-        grid-template-columns: 1fr;
-      }
-
-      header {
-        align-items: flex-start;
-        flex-direction: column;
-      }
-
-      .controls {
-        grid-template-columns: 1fr 1fr;
-      }
-    }
-
-    @media (max-width: 520px) {
-      .app {
-        padding: 14px;
-      }
-
-      .controls {
-        grid-template-columns: 1fr;
-      }
-
-      .metric-grid {
-        grid-template-columns: 1fr;
-      }
+    .warn {
+      color: #d29922;
     }
   </style>
 </head>
 
 <body>
-  <main class="app">
-    <header>
-      <div class="title-block">
-        <h1>AI Room Navigator</h1>
-        <p>
-          Live video object detection + mobile sensors + rough indoor path estimation.
-          Στόχος: να βοηθήσει στην πλοήγηση μέσα σε δωμάτιο με κάμερα και αισθητήρες.
-        </p>
+  <div class="app">
+    <h1>AI Room Navigator — Debug Version</h1>
+
+    <div class="panel">
+      <button onclick="checkSystem()">1. Check System</button>
+      <button class="green" onclick="startCamera()">2. Start Camera</button>
+      <button onclick="loadAI()">3. Load AI Model</button>
+      <button onclick="startDetection()">4. Start Detection</button>
+      <button class="red" onclick="stopEverything()">Stop</button>
+    </div>
+
+    <div class="panel">
+      <div class="video-wrap">
+        <video id="video" autoplay muted playsinline></video>
+        <canvas id="canvas"></canvas>
       </div>
-      <div class="badge" id="modelBadge">AI model: loading…</div>
-    </header>
+    </div>
 
-    <section class="grid">
-      <div class="card">
-        <div class="camera-shell">
-          <video id="video" autoplay muted playsinline></video>
-          <canvas id="overlayCanvas"></canvas>
-
-          <div class="hud">
-            <div class="guidance">
-              <div>
-                <strong id="guidanceText">Initializing…</strong>
-                <br />
-                <span id="guidanceSubtext">Press Start Camera and Start Navigation.</span>
-              </div>
-              <div class="status-dot" id="statusDot"></div>
-            </div>
-          </div>
-        </div>
-
-        <div class="controls">
-          <button onclick="requestPermissions()">Άδειες αισθητήρων</button>
-          <button onclick="startCamera()">Start Camera</button>
-          <button class="good" onclick="startNavigation()">Start Navigation</button>
-          <button class="stop" onclick="stopNavigation()">Stop</button>
-          <button class="purple" onclick="toggleSpeech()">Speech: <span id="speechState">ON</span></button>
-          <button onclick="downloadCSV()">Download CSV</button>
-        </div>
-
-        <p class="note">
-          Για καλύτερη λειτουργία σε κινητό: άνοιξε τη σελίδα με HTTPS ή localhost.
-          Σε iPhone χρειάζεται user gesture για κάμερα και αισθητήρες.
-        </p>
-      </div>
-
-      <aside class="card">
-        <h2 style="margin: 0 0 8px;">Navigation Panel</h2>
-
-        <div class="metric-grid">
-          <div class="metric">
-            <small>Detected objects</small>
-            <b id="objectCount">0</b>
-          </div>
-
-          <div class="metric">
-            <small>Risk level</small>
-            <b id="riskLevel">LOW</b>
-          </div>
-
-          <div class="metric">
-            <small>Heading</small>
-            <b id="headingValue">0°</b>
-          </div>
-
-          <div class="metric">
-            <small>Samples</small>
-            <b id="sampleCount">0</b>
-          </div>
-        </div>
-
-        <div class="object-list" id="objectList"></div>
-
-        <canvas id="pathCanvas" width="500" height="290"></canvas>
-
-        <p class="note">
-          <span class="danger">Safety note:</span>
-          camera object detection has no true depth estimation. The “distance” logic here is approximated from
-          bounding-box size and position.
-        </p>
-      </aside>
-    </section>
-  </main>
+    <div class="panel">
+      <h3>Status</h3>
+      <div id="status">Ready. Press “Check System”.</div>
+    </div>
+  </div>
 
   <script>
     const video = document.getElementById("video");
-    const overlayCanvas = document.getElementById("overlayCanvas");
-    const overlayCtx = overlayCanvas.getContext("2d");
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+    const statusBox = document.getElementById("status");
 
-    const pathCanvas = document.getElementById("pathCanvas");
-    const pathCtx = pathCanvas.getContext("2d");
-
-    const modelBadge = document.getElementById("modelBadge");
-    const guidanceText = document.getElementById("guidanceText");
-    const guidanceSubtext = document.getElementById("guidanceSubtext");
-    const statusDot = document.getElementById("statusDot");
-    const objectCount = document.getElementById("objectCount");
-    const riskLevel = document.getElementById("riskLevel");
-    const headingValue = document.getElementById("headingValue");
-    const sampleCount = document.getElementById("sampleCount");
-    const objectList = document.getElementById("objectList");
-    const speechState = document.getElementById("speechState");
-
+    let stream = null;
     let model = null;
-    let isCameraReady = false;
-    let isNavigating = false;
-    let speechEnabled = true;
-    let detectionLoopId = null;
-    let recordIntervalId = null;
-    let gpsWatchId = null;
+    let running = false;
 
-    let lastSpokenAt = 0;
-    let lastTimestamp = null;
-
-    let data = [];
-    let latestPredictions = [];
-
-    let currentMotion = {
-      ax: 0,
-      ay: 0,
-      az: 0,
-      gx: 0,
-      gy: 0,
-      gz: 0
-    };
-
-    let currentOrientation = {
-      alpha: 0,
-      beta: 0,
-      gamma: 0
-    };
-
-    let currentPosition = {
-      latitude: "",
-      longitude: "",
-      accuracy: ""
-    };
-
-    let estimatedPath = [];
-    let currentX = 250;
-    let currentY = 145;
-
-    const dangerousClasses = new Set([
-      "chair",
-      "couch",
-      "bed",
-      "dining table",
-      "tv",
-      "laptop",
-      "person",
-      "potted plant",
-      "bench",
-      "toilet",
-      "sink",
-      "refrigerator",
-      "microwave",
-      "oven",
-      "backpack",
-      "suitcase"
-    ]);
-
-    init();
-
-    async function init() {
-      try {
-        modelBadge.textContent = "AI model: loading…";
-        model = await cocoSsd.load();
-        modelBadge.textContent = "AI model: ready";
-        setGuidance("Ready", "Start the camera to detect objects.", "safe");
-        drawPath();
-      } catch (error) {
-        console.error(error);
-        modelBadge.textContent = "AI model: failed";
-        setGuidance("Model failed", "Check internet/CDN access and reload.", "danger");
-      }
+    function log(message, type = "") {
+      const prefix = type === "ok" ? "✅ " : type === "bad" ? "❌ " : type === "warn" ? "⚠️ " : "• ";
+      statusBox.textContent += "\n" + prefix + message;
+      console.log(message);
     }
 
-    async function requestPermissions() {
-      try {
-        if (
-          typeof DeviceMotionEvent !== "undefined" &&
-          typeof DeviceMotionEvent.requestPermission === "function"
-        ) {
-          await DeviceMotionEvent.requestPermission();
-        }
+    function resetLog(message) {
+      statusBox.textContent = message;
+      console.log(message);
+    }
 
-        if (
-          typeof DeviceOrientationEvent !== "undefined" &&
-          typeof DeviceOrientationEvent.requestPermission === "function"
-        ) {
-          await DeviceOrientationEvent.requestPermission();
-        }
+    function checkSystem() {
+      resetLog("System check:");
 
-        setGuidance("Permissions OK", "Sensor permissions requested successfully.", "safe");
-      } catch (error) {
-        console.error(error);
-        setGuidance("Permission error", String(error), "danger");
+      log("URL: " + location.href);
+
+      if (location.protocol === "https:" || location.hostname === "localhost" || location.hostname === "127.0.0.1") {
+        log("Secure context OK", "ok");
+      } else {
+        log("Camera may fail. Use HTTPS or localhost.", "bad");
       }
+
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        log("getUserMedia available", "ok");
+      } else {
+        log("getUserMedia NOT available. Camera cannot start.", "bad");
+      }
+
+      if (window.tf) {
+        log("TensorFlow.js script loaded", "ok");
+      } else {
+        log("TensorFlow.js script NOT loaded", "bad");
+      }
+
+      if (window.cocoSsd) {
+        log("COCO-SSD script loaded", "ok");
+      } else {
+        log("COCO-SSD script NOT loaded", "bad");
+      }
+
+      log("Browser: " + navigator.userAgent);
     }
 
     async function startCamera() {
+      resetLog("Starting camera...");
+
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          throw new Error("navigator.mediaDevices.getUserMedia is not available. Use HTTPS or a supported browser.");
+        }
+
+        stream = await navigator.mediaDevices.getUserMedia({
           video: {
-            facingMode: { ideal: "environment" },
-            width: { ideal: 1280 },
-            height: { ideal: 720 }
+            facingMode: "environment"
           },
           audio: false
         });
 
         video.srcObject = stream;
 
-        await new Promise(resolve => {
-          video.onloadedmetadata = () => resolve();
+        await video.play();
+
+        canvas.width = video.videoWidth || 640;
+        canvas.height = video.videoHeight || 480;
+
+        log("Camera started", "ok");
+        log("Video size: " + canvas.width + " x " + canvas.height, "ok");
+      } catch (error) {
+        log("Camera failed: " + error.name + " — " + error.message, "bad");
+      }
+    }
+
+    async function loadAI() {
+      resetLog("Loading AI model...");
+
+      try {
+        if (!window.tf) {
+          throw new Error("TensorFlow.js did not load.");
+        }
+
+        if (!window.cocoSsd) {
+          throw new Error("COCO-SSD did not load.");
+        }
+
+        await tf.ready();
+        log("TensorFlow backend: " + tf.getBackend(), "ok");
+
+        model = await cocoSsd.load({
+          base: "lite_mobilenet_v2"
         });
 
-        resizeOverlay();
-        window.addEventListener("resize", resizeOverlay);
-
-        isCameraReady = true;
-        setGuidance("Camera ready", "Object detection is active.", "safe");
-
-        if (!detectionLoopId) {
-          detectFrame();
-        }
+        log("COCO-SSD model loaded", "ok");
       } catch (error) {
-        console.error(error);
-        setGuidance("Camera error", "Camera permission denied or unavailable.", "danger");
+        log("AI model failed: " + error.name + " — " + error.message, "bad");
       }
     }
 
-    function startNavigation() {
+    async function startDetection() {
+      if (!stream) {
+        resetLog("Start camera first.");
+        return;
+      }
+
       if (!model) {
-        setGuidance("AI not ready", "Wait until the model finishes loading.", "warning");
+        resetLog("Load AI model first.");
         return;
       }
 
-      if (!isCameraReady) {
-        setGuidance("Camera needed", "Press Start Camera first.", "warning");
-        return;
+      running = true;
+      resetLog("Detection running...");
+      detectLoop();
+    }
+
+    async function detectLoop() {
+      if (!running) return;
+
+      try {
+        canvas.width = video.videoWidth || canvas.width;
+        canvas.height = video.videoHeight || canvas.height;
+
+        const predictions = await model.detect(video);
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        predictions.forEach(prediction => {
+          if (prediction.score < 0.45) return;
+
+          const [x, y, width, height] = prediction.bbox;
+
+          ctx.strokeStyle = "#00ff99";
+          ctx.lineWidth = 3;
+          ctx.strokeRect(x, y, width, height);
+
+          ctx.fillStyle = "#00ff99";
+          ctx.font = "18px Arial";
+
+          const label = `${prediction.class} ${Math.round(prediction.score * 100)}%`;
+          ctx.fillText(label, x + 6, y > 22 ? y - 6 : y + 22);
+        });
+
+        statusBox.textContent =
+          "Detection running...\n" +
+          "Objects: " + predictions.length + "\n" +
+          predictions
+            .filter(p => p.score >= 0.45)
+            .map(p => `${p.class} ${Math.round(p.score * 100)}%`)
+            .join("\n");
+
+      } catch (error) {
+        log("Detection error: " + error.message, "bad");
       }
 
-      isNavigating = true;
-      data = [];
-      estimatedPath = [{ x: currentX, y: currentY }];
-      lastTimestamp = Date.now();
+      requestAnimationFrame(detectLoop);
+    }
 
-      window.addEventListener("devicemotion", handleMotion);
-      window.addEventListener("deviceorientation", handleOrientation);
+    function stopEverything() {
+      running = false;
 
-      if ("geolocation" in navigator) {
-        gpsWatchId = navigator.geolocation.watchPosition(
-          handleGPS,
-          handleGPSError,
-          {
-            enableHighAccuracy: true,
-            maximumAge: 1000,
-            timeout: 5000
-          }
-        );
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+        stream = null;
       }
 
-      clearInterval(recordIntervalId);
-      recordIntervalId = setInterval(recordSample, 250);
-
-      setGuidance("Navigation started", "Move slowly and keep the camera facing forward.", "safe");
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      resetLog("Stopped.");
     }
 
-    function stopNavigation() {
-      isNavigating = false;
-
-      window.removeEventListener("devicemotion", handleMotion);
-      window.removeEventListener("deviceorientation", handleOrientation);
-
-      if (gpsWatchId !== null) {
-        navigator.geolocation.clearWatch(gpsWatchId);
-        gpsWatchId = null;
-      }
-
-      clearInterval(recordIntervalId);
-      recordIntervalId = null;
-
-      setGuidance("Stopped", `Recorded samples: ${data.length}`, "warning");
-    }
-
-    function toggleSpeech() {
-      speechEnabled = !speechEnabled;
-      speechState.textContent = speechEnabled ? "ON" : "OFF";
-
-      if (!speechEnabled && "speechSynthesis" in window) {
-        window.speechSynthesis.cancel();
-      }
-    }
-
-    async function detectFrame() {
-      if (model && isCameraReady && video.readyState >= 2) {
-        try {
-          latestPredictions = await model.detect(video);
-          renderDetections(latestPredictions);
-          updateNavigationDecision(latestPredictions);
-        } catch (error) {
-          console.error(error);
-        }
-      }
-
-      detectionLoopId = requestAnimationFrame(detectFrame);
-    }
-
-    function renderDetections(predictions) {
-      resizeOverlay();
-
-      overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
-
-      const scaleX = overlayCanvas.width / video.videoWidth;
-      const scaleY = overlayCanvas.height / video.videoHeight;
-
-      const sorted = predictions
-        .filter(item => item.score >= 0.45)
-        .sort((a, b) => b.score - a.score);
-
-      objectCount.textContent = sorted.length.toString();
-
-      objectList.innerHTML = "";
-
-      sorted.slice(0, 8).forEach(prediction => {
-        const [x, y, width, height] = prediction.bbox;
-
-        const sx = x * scaleX;
-        const sy = y * scaleY;
-        const sw = width * scaleX;
-        const sh = height * scaleY;
-
-        const isRisky = dangerousClasses.has(prediction.class);
-        const color = isRisky ? "#ff4d6d" : "#2ee59d";
-
-        overlayCtx.lineWidth = 3;
-        overlayCtx.strokeStyle = color;
-        overlayCtx.fillStyle = color;
-
-        overlayCtx.strokeRect(sx, sy, sw, sh);
-
-        const label = `${prediction.class} ${(prediction.score * 100).toFixed(0)}%`;
-        overlayCtx.font = "bold 16px system-ui";
-        const textWidth = overlayCtx.measureText(label).width;
-
-        overlayCtx.fillRect(sx, Math.max(0, sy - 28), textWidth + 14, 28);
-        overlayCtx.fillStyle = "#06101f";
-        overlayCtx.fillText(label, sx + 7, Math.max(18, sy - 8));
-
-        const pill = document.createElement("div");
-        pill.className = "object-pill";
-        pill.innerHTML = `
-          <span>${prediction.class}</span>
-          <em>${Math.round(prediction.score * 100)}%</em>
-        `;
-        objectList.appendChild(pill);
-      });
-    }
-
-    function updateNavigationDecision(predictions) {
-      const valid = predictions.filter(item => item.score >= 0.45);
-      const frameWidth = video.videoWidth || 1;
-      const frameHeight = video.videoHeight || 1;
-
-      let strongestRisk = {
-        level: "LOW",
-        message: "Path looks clear",
-        subtext: "Continue slowly.",
-        type: "safe",
-        speak: "Path clear"
-      };
-
-      for (const prediction of valid) {
-        const [x, y, width, height] = prediction.bbox;
-        const centerX = x + width / 2;
-        const centerZone = centerX > frameWidth * 0.32 && centerX < frameWidth * 0.68;
-        const lowerZone = y + height > frameHeight * 0.52;
-        const sizeRatio = (width * height) / (frameWidth * frameHeight);
-        const riskyClass = dangerousClasses.has(prediction.class);
-
-        if (riskyClass && centerZone && lowerZone && sizeRatio > 0.18) {
-          strongestRisk = {
-            level: "HIGH",
-            message: "STOP",
-            subtext: `${prediction.class} directly ahead.`,
-            type: "danger",
-            speak: `${prediction.class} ahead. Stop.`
-          };
-          break;
-        }
-
-        if (riskyClass && centerZone && sizeRatio > 0.08) {
-          strongestRisk = {
-            level: "MEDIUM",
-            message: "Slow down",
-            subtext: `${prediction.class} near the path.`,
-            type: "warning",
-            speak: `${prediction.class} near the path. Slow down.`
-          };
-        }
-      }
-
-      riskLevel.textContent = strongestRisk.level;
-      setGuidance(strongestRisk.message, strongestRisk.subtext, strongestRisk.type);
-
-      if (isNavigating) {
-        maybeSpeak(strongestRisk.speak, strongestRisk.level);
-      }
-    }
-
-    function setGuidance(message, subtext, type) {
-      guidanceText.textContent = message;
-      guidanceSubtext.textContent = subtext;
-
-      if (type === "danger") {
-        statusDot.style.background = "var(--red)";
-        statusDot.style.boxShadow = "0 0 25px var(--red)";
-      } else if (type === "warning") {
-        statusDot.style.background = "var(--yellow)";
-        statusDot.style.boxShadow = "0 0 25px var(--yellow)";
-      } else {
-        statusDot.style.background = "var(--green)";
-        statusDot.style.boxShadow = "0 0 25px var(--green)";
-      }
-    }
-
-    function maybeSpeak(text, level) {
-      if (!speechEnabled || !("speechSynthesis" in window)) return;
-
-      const now = Date.now();
-      const cooldown = level === "HIGH" ? 1800 : 3500;
-
-      if (now - lastSpokenAt < cooldown) return;
-
-      lastSpokenAt = now;
-      window.speechSynthesis.cancel();
-
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.rate = 1;
-      utterance.pitch = 1;
-      utterance.volume = 1;
-
-      window.speechSynthesis.speak(utterance);
-    }
-
-    function handleMotion(event) {
-      if (!isNavigating) return;
-
-      if (event.accelerationIncludingGravity) {
-        currentMotion.ax = event.accelerationIncludingGravity.x ?? 0;
-        currentMotion.ay = event.accelerationIncludingGravity.y ?? 0;
-        currentMotion.az = event.accelerationIncludingGravity.z ?? 0;
-      }
-
-      if (event.rotationRate) {
-        currentMotion.gx = event.rotationRate.alpha ?? 0;
-        currentMotion.gy = event.rotationRate.beta ?? 0;
-        currentMotion.gz = event.rotationRate.gamma ?? 0;
-      }
-    }
-
-    function handleOrientation(event) {
-      if (!isNavigating) return;
-
-      currentOrientation.alpha = event.alpha ?? 0;
-      currentOrientation.beta = event.beta ?? 0;
-      currentOrientation.gamma = event.gamma ?? 0;
-
-      headingValue.textContent = `${currentOrientation.alpha.toFixed(0)}°`;
-    }
-
-    function handleGPS(position) {
-      currentPosition.latitude = position.coords.latitude;
-      currentPosition.longitude = position.coords.longitude;
-      currentPosition.accuracy = position.coords.accuracy;
-    }
-
-    function handleGPSError(error) {
-      console.warn("GPS error:", error.message);
-    }
-
-    function recordSample() {
-      if (!isNavigating) return;
-
-      const now = Date.now();
-
-      const ax = currentMotion.ax;
-      const ay = currentMotion.ay;
-      const az = currentMotion.az;
-
-      const accelerationMagnitude = Math.sqrt(ax * ax + ay * ay + az * az);
-      const heading = currentOrientation.alpha || 0;
-
-      updateEstimatedPath(accelerationMagnitude, heading);
-      drawPath();
-
-      const detectedObjects = latestPredictions
-        .filter(item => item.score >= 0.45)
-        .map(item => `${item.class}:${item.score.toFixed(2)}`)
-        .join("|");
-
-      const nearestRiskObject = getNearestRiskObject();
-
-      data.push({
-        timestamp: now,
-        ax,
-        ay,
-        az,
-        accelerationMagnitude,
-        gx: currentMotion.gx,
-        gy: currentMotion.gy,
-        gz: currentMotion.gz,
-        alpha: currentOrientation.alpha,
-        beta: currentOrientation.beta,
-        gamma: currentOrientation.gamma,
-        latitude: currentPosition.latitude,
-        longitude: currentPosition.longitude,
-        accuracy: currentPosition.accuracy,
-        estimatedX: currentX,
-        estimatedY: currentY,
-        detectedObjects,
-        nearestRiskObject,
-        riskLevel: riskLevel.textContent
-      });
-
-      sampleCount.textContent = data.length.toString();
-    }
-
-    function getNearestRiskObject() {
-      const frameArea = (video.videoWidth || 1) * (video.videoHeight || 1);
-
-      const candidates = latestPredictions
-        .filter(item => item.score >= 0.45 && dangerousClasses.has(item.class))
-        .map(item => {
-          const area = item.bbox[2] * item.bbox[3];
-          return {
-            className: item.class,
-            score: item.score,
-            areaRatio: area / frameArea
-          };
-        })
-        .sort((a, b) => b.areaRatio - a.areaRatio);
-
-      if (candidates.length === 0) return "";
-
-      const top = candidates[0];
-      return `${top.className}:${top.areaRatio.toFixed(3)}`;
-    }
-
-    function updateEstimatedPath(accMag, headingDegrees) {
-      const now = Date.now();
-
-      if (!lastTimestamp) {
-        lastTimestamp = now;
-        return;
-      }
-
-      const movementIntensity = Math.abs(accMag - 9.81);
-
-      lastTimestamp = now;
-
-      if (movementIntensity < 0.8) {
-        return;
-      }
-
-      const stepLength = Math.min(5, Math.max(1.5, movementIntensity * 1.2));
-      const headingRad = headingDegrees * Math.PI / 180;
-
-      currentX += stepLength * Math.sin(headingRad);
-      currentY -= stepLength * Math.cos(headingRad);
-
-      currentX = clamp(currentX, 8, pathCanvas.width - 8);
-      currentY = clamp(currentY, 8, pathCanvas.height - 8);
-
-      estimatedPath.push({ x: currentX, y: currentY });
-
-      if (estimatedPath.length > 1200) {
-        estimatedPath.shift();
-      }
-    }
-
-    function drawPath() {
-      pathCtx.clearRect(0, 0, pathCanvas.width, pathCanvas.height);
-
-      pathCtx.strokeStyle = "rgba(255,255,255,0.08)";
-      pathCtx.lineWidth = 1;
-
-      for (let x = 0; x < pathCanvas.width; x += 24) {
-        pathCtx.beginPath();
-        pathCtx.moveTo(x, 0);
-        pathCtx.lineTo(x, pathCanvas.height);
-        pathCtx.stroke();
-      }
-
-      for (let y = 0; y < pathCanvas.height; y += 24) {
-        pathCtx.beginPath();
-        pathCtx.moveTo(0, y);
-        pathCtx.lineTo(pathCanvas.width, y);
-        pathCtx.stroke();
-      }
-
-      if (estimatedPath.length < 2) {
-        drawPoint(currentX, currentY, "#39a7ff", 7);
-        return;
-      }
-
-      const gradient = pathCtx.createLinearGradient(0, 0, pathCanvas.width, pathCanvas.height);
-      gradient.addColorStop(0, "#39a7ff");
-      gradient.addColorStop(1, "#2ee59d");
-
-      pathCtx.beginPath();
-      pathCtx.moveTo(estimatedPath[0].x, estimatedPath[0].y);
-
-      for (let i = 1; i < estimatedPath.length; i++) {
-        pathCtx.lineTo(estimatedPath[i].x, estimatedPath[i].y);
-      }
-
-      pathCtx.strokeStyle = gradient;
-      pathCtx.lineWidth = 4;
-      pathCtx.lineCap = "round";
-      pathCtx.lineJoin = "round";
-      pathCtx.stroke();
-
-      const start = estimatedPath[0];
-      const end = estimatedPath[estimatedPath.length - 1];
-
-      drawPoint(start.x, start.y, "#2ee59d", 7);
-      drawPoint(end.x, end.y, "#ff4d6d", 8);
-    }
-
-    function drawPoint(x, y, color, radius) {
-      pathCtx.beginPath();
-      pathCtx.arc(x, y, radius, 0, Math.PI * 2);
-      pathCtx.fillStyle = color;
-      pathCtx.shadowColor = color;
-      pathCtx.shadowBlur = 18;
-      pathCtx.fill();
-      pathCtx.shadowBlur = 0;
-    }
-
-    function downloadCSV() {
-      if (data.length === 0) {
-        alert("Δεν υπάρχουν δεδομένα.");
-        return;
-      }
-
-      const headers = Object.keys(data[0]);
-
-      const csvRows = [
-        headers.join(","),
-        ...data.map(row => {
-          return headers
-            .map(header => csvEscape(row[header]))
-            .join(",");
-        })
-      ];
-
-      const blob = new Blob([csvRows.join("\n")], {
-        type: "text/csv;charset=utf-8"
-      });
-
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-
-      a.href = url;
-      a.download = "ai_room_navigation_data.csv";
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-
-      URL.revokeObjectURL(url);
-    }
-
-    function csvEscape(value) {
-      const text = String(value ?? "");
-      const escaped = text.replaceAll('"', '""');
-      return `"${escaped}"`;
-    }
-
-    function resizeOverlay() {
-      const rect = overlayCanvas.getBoundingClientRect();
-      const width = Math.max(1, Math.round(rect.width));
-      const height = Math.max(1, Math.round(rect.height));
-
-      if (overlayCanvas.width !== width || overlayCanvas.height !== height) {
-        overlayCanvas.width = width;
-        overlayCanvas.height = height;
-      }
-    }
-
-    function clamp(value, min, max) {
-      return Math.min(max, Math.max(min, value));
-    }
+    window.addEventListener("error", event => {
+      log("Page error: " + event.message, "bad");
+    });
+
+    window.addEventListener("unhandledrejection", event => {
+      log("Promise error: " + event.reason, "bad");
+    });
   </script>
 </body>
 </html>
