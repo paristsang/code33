@@ -4,14 +4,13 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <title>AI SOM Room Navigator</title>
+  <title>Efficient AI SOM Room Navigator</title>
 
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3/dist/coco-ssd.min.js"></script>
 
   <style>
     :root {
-      --bg: #050816;
       --panel: rgba(255, 255, 255, 0.08);
       --panel-strong: rgba(255, 255, 255, 0.13);
       --border: rgba(255, 255, 255, 0.16);
@@ -132,8 +131,6 @@
       left: 12px;
       right: 12px;
       bottom: 12px;
-      display: grid;
-      gap: 10px;
     }
 
     .guidance {
@@ -199,40 +196,27 @@
       filter: brightness(1.08);
     }
 
-    button:active {
-      transform: translateY(0);
-    }
-
     button.good {
       background: linear-gradient(135deg, #168a5a, #2ee59d);
-      box-shadow: 0 12px 26px rgba(46, 229, 157, 0.2);
     }
 
     button.warning,
     .file-button.warning {
       background: linear-gradient(135deg, #9a6700, #ffd166);
       color: #1b1200;
-      box-shadow: 0 12px 26px rgba(255, 209, 102, 0.18);
     }
 
     button.stop {
       background: linear-gradient(135deg, #d73a49, #ff4d6d);
-      box-shadow: 0 12px 26px rgba(255, 77, 109, 0.22);
     }
 
     button.purple,
     .file-button.purple {
       background: linear-gradient(135deg, #6f42c1, #b388ff);
-      box-shadow: 0 12px 26px rgba(179, 136, 255, 0.2);
     }
 
     input[type="file"] {
       display: none;
-    }
-
-    .panel-title {
-      margin: 0 0 12px;
-      font-size: 22px;
     }
 
     .metric-grid {
@@ -257,7 +241,7 @@
     }
 
     .metric b {
-      font-size: 21px;
+      font-size: 20px;
     }
 
     .object-list {
@@ -306,7 +290,7 @@
       color: var(--muted);
       line-height: 1.45;
       white-space: pre-wrap;
-      max-height: 180px;
+      max-height: 190px;
       overflow: auto;
       font-size: 13px;
     }
@@ -351,10 +335,6 @@
         grid-template-columns: 1fr 1fr;
       }
 
-      .metric-grid {
-        grid-template-columns: 1fr 1fr;
-      }
-
       button,
       .file-button {
         font-size: 13px;
@@ -368,10 +348,9 @@
   <main class="app">
     <header>
       <div>
-        <h1>AI SOM Room Navigator</h1>
+        <h1>Efficient AI SOM Room Navigator</h1>
         <p class="subtitle">
-          Learn a room using synchronized camera detections and mobile sensor data.
-          Then navigate using object detection plus SOM-based room memory.
+          Learn room patterns using camera detections and mobile sensors. Then navigate using obstacle detection plus efficient SOM memory.
         </p>
       </div>
 
@@ -391,7 +370,7 @@
             <div class="guidance">
               <div>
                 <strong id="guidanceText">READY</strong>
-                <span id="guidanceSubtext">Press Camera, Load AI, Sensors, then Learn Room.</span>
+                <span id="guidanceSubtext">Camera → Load AI → Sensors → Learn Room → Train SOM.</span>
               </div>
               <div class="status-dot" id="statusDot"></div>
             </div>
@@ -427,44 +406,22 @@
         <div class="log" id="logBox">Ready.</div>
 
         <p class="note">
-          iPhone: use Safari, real GitHub Pages HTTPS URL, and allow camera in Settings.
-          First workflow: Camera → Load AI → Sensors → Learn Room → Stop Learn → Train SOM → Navigate.
+          Workflow: Camera → Load AI → Sensors → Learn Room → walk slowly → Stop Learn → Train SOM → Save SOM → Navigate.
         </p>
       </section>
 
       <aside class="card">
-        <h2 class="panel-title">Navigation Panel</h2>
+        <h2>Navigation Panel</h2>
 
         <div class="metric-grid">
-          <div class="metric">
-            <small>Objects</small>
-            <b id="objectCount">0</b>
-          </div>
-
-          <div class="metric">
-            <small>Risk</small>
-            <b id="riskLevel">LOW</b>
-          </div>
-
-          <div class="metric">
-            <small>Heading</small>
-            <b id="headingValue">0°</b>
-          </div>
-
-          <div class="metric">
-            <small>Samples</small>
-            <b id="sampleCount">0</b>
-          </div>
-
-          <div class="metric">
-            <small>Learning samples</small>
-            <b id="learningCount">0</b>
-          </div>
-
-          <div class="metric">
-            <small>SOM familiarity</small>
-            <b id="somFamiliarity">—</b>
-          </div>
+          <div class="metric"><small>Objects</small><b id="objectCount">0</b></div>
+          <div class="metric"><small>Risk</small><b id="riskLevel">LOW</b></div>
+          <div class="metric"><small>Heading</small><b id="headingValue">0°</b></div>
+          <div class="metric"><small>Samples</small><b id="sampleCount">0</b></div>
+          <div class="metric"><small>Learning samples</small><b id="learningCount">0</b></div>
+          <div class="metric"><small>SOM familiarity</small><b id="somFamiliarity">—</b></div>
+          <div class="metric"><small>SOM error</small><b id="somError">—</b></div>
+          <div class="metric"><small>SOM hits</small><b id="somHits">—</b></div>
         </div>
 
         <div class="object-list" id="objectList"></div>
@@ -473,171 +430,329 @@
         <canvas id="somCanvas" width="500" height="230"></canvas>
 
         <p class="note">
-          <span class="danger">Important:</span>
-          This is experimental. SOM learns patterns, not true geometric depth or safety-certified navigation.
+          <span class="danger">Experimental:</span>
+          This recognizes learned room states. It does not measure true depth or provide certified navigation safety.
         </p>
       </aside>
     </section>
   </main>
 
   <script>
-    class SelfOrganizingMap {
+    class EfficientSelfOrganizingMap {
       constructor(width, height, inputSize, options = {}) {
         this.width = width;
         this.height = height;
         this.inputSize = inputSize;
-        this.initialLearningRate = options.learningRate ?? 0.45;
-        this.initialRadius = options.radius ?? Math.max(width, height) / 2;
-        this.iterations = options.iterations ?? 1200;
-        this.nodes = [];
+        this.nodeCount = width * height;
 
-        for (let y = 0; y < height; y++) {
-          for (let x = 0; x < width; x++) {
-            const weights = [];
+        this.initialLearningRate = options.learningRate ?? 0.35;
+        this.finalLearningRate = options.finalLearningRate ?? 0.04;
+        this.initialRadius = options.radius ?? Math.max(width, height) * 0.5;
+        this.finalRadius = options.finalRadius ?? 1.0;
+        this.iterations = options.iterations ?? 1800;
 
-            for (let i = 0; i < inputSize; i++) {
-              weights.push(Math.random());
-            }
+        this.weights = new Float32Array(this.nodeCount * this.inputSize);
+        this.nodeX = new Float32Array(this.nodeCount);
+        this.nodeY = new Float32Array(this.nodeCount);
+        this.hits = new Uint32Array(this.nodeCount);
+        this.averageRisk = new Float32Array(this.nodeCount);
+        this.quantizationError = 1;
 
-            this.nodes.push({
-              x,
-              y,
-              weights,
-              hits: 0,
-              averageRisk: 0
-            });
+        this.featureMean = new Float32Array(this.inputSize);
+        this.featureStd = new Float32Array(this.inputSize);
+
+        this.initializeNodes();
+        this.initializeWeights();
+      }
+
+      initializeNodes() {
+        let index = 0;
+
+        for (let y = 0; y < this.height; y++) {
+          for (let x = 0; x < this.width; x++) {
+            this.nodeX[index] = x;
+            this.nodeY[index] = y;
+            index++;
           }
         }
       }
 
+      initializeWeights() {
+        for (let i = 0; i < this.weights.length; i++) {
+          this.weights[i] = Math.random();
+        }
+
+        for (let i = 0; i < this.inputSize; i++) {
+          this.featureMean[i] = 0;
+          this.featureStd[i] = 1;
+        }
+      }
+
+      prepareSamples(rawSamples) {
+        if (!rawSamples || rawSamples.length === 0) {
+          throw new Error("No SOM samples available.");
+        }
+
+        const vectors = rawSamples.map(sample => {
+          const vector = sample.vector || sample;
+
+          if (!vector || vector.length !== this.inputSize) {
+            throw new Error("Invalid feature vector size.");
+          }
+
+          return Array.from(vector, value => Number(value) || 0);
+        });
+
+        this.computeFeatureStats(vectors);
+
+        return rawSamples.map((sample, index) => ({
+          vector: this.normalizeVector(vectors[index]),
+          riskScore: Number(sample.riskScore || 0),
+          timestamp: sample.timestamp || Date.now(),
+          estimatedX: sample.estimatedX ?? 0,
+          estimatedY: sample.estimatedY ?? 0,
+          detectedObjects: sample.detectedObjects ?? "",
+          riskLevel: sample.riskLevel ?? "LOW"
+        }));
+      }
+
+      computeFeatureStats(vectors) {
+        for (let i = 0; i < this.inputSize; i++) {
+          this.featureMean[i] = 0;
+          this.featureStd[i] = 0;
+        }
+
+        for (const vector of vectors) {
+          for (let i = 0; i < this.inputSize; i++) {
+            this.featureMean[i] += vector[i];
+          }
+        }
+
+        for (let i = 0; i < this.inputSize; i++) {
+          this.featureMean[i] /= vectors.length;
+        }
+
+        for (const vector of vectors) {
+          for (let i = 0; i < this.inputSize; i++) {
+            const diff = vector[i] - this.featureMean[i];
+            this.featureStd[i] += diff * diff;
+          }
+        }
+
+        for (let i = 0; i < this.inputSize; i++) {
+          this.featureStd[i] = Math.sqrt(this.featureStd[i] / vectors.length);
+
+          if (this.featureStd[i] < 0.0001) {
+            this.featureStd[i] = 1;
+          }
+        }
+      }
+
+      normalizeVector(vector) {
+        const output = new Float32Array(this.inputSize);
+
+        for (let i = 0; i < this.inputSize; i++) {
+          const z = (Number(vector[i]) - this.featureMean[i]) / this.featureStd[i];
+          output[i] = 1 / (1 + Math.exp(-z));
+        }
+
+        return output;
+      }
+
       findBMU(input) {
-        let bestNode = null;
+        let bestIndex = 0;
         let bestDistance = Infinity;
 
-        for (const node of this.nodes) {
-          const distance = this.euclideanDistance(input, node.weights);
+        for (let nodeIndex = 0; nodeIndex < this.nodeCount; nodeIndex++) {
+          let sum = 0;
+          const offset = nodeIndex * this.inputSize;
 
-          if (distance < bestDistance) {
-            bestDistance = distance;
-            bestNode = node;
+          for (let i = 0; i < this.inputSize; i++) {
+            const diff = input[i] - this.weights[offset + i];
+            sum += diff * diff;
+          }
+
+          if (sum < bestDistance) {
+            bestDistance = sum;
+            bestIndex = nodeIndex;
           }
         }
 
         return {
-          node: bestNode,
-          distance: bestDistance
+          index: bestIndex,
+          x: this.nodeX[bestIndex],
+          y: this.nodeY[bestIndex],
+          distance: Math.sqrt(bestDistance)
         };
       }
 
-      train(samples) {
-        if (!samples || samples.length === 0) {
-          throw new Error("No SOM training samples available.");
-        }
+      async trainAsync(rawSamples, onProgress) {
+        const samples = this.prepareSamples(rawSamples);
+        const chunkSize = 40;
 
         for (let iteration = 0; iteration < this.iterations; iteration++) {
           const sample = samples[Math.floor(Math.random() * samples.length)];
-          const input = sample.vector;
+          this.trainOneIteration(sample.vector, iteration);
 
-          const progress = iteration / this.iterations;
-          const learningRate = this.initialLearningRate * Math.exp(-progress);
-          const radius = this.initialRadius * Math.exp(-progress);
-          const radiusSquared = radius * radius;
-
-          const bmuResult = this.findBMU(input);
-          const bmu = bmuResult.node;
-
-          for (const node of this.nodes) {
-            const gridDistanceSquared =
-              Math.pow(node.x - bmu.x, 2) +
-              Math.pow(node.y - bmu.y, 2);
-
-            if (gridDistanceSquared <= radiusSquared) {
-              const influence = Math.exp(-gridDistanceSquared / (2 * radiusSquared));
-
-              for (let i = 0; i < this.inputSize; i++) {
-                node.weights[i] +=
-                  influence *
-                  learningRate *
-                  (input[i] - node.weights[i]);
-              }
+          if (iteration % chunkSize === 0) {
+            if (typeof onProgress === "function") {
+              onProgress({
+                iteration,
+                total: this.iterations,
+                progress: iteration / this.iterations
+              });
             }
+
+            await new Promise(resolve => setTimeout(resolve, 0));
           }
         }
 
         this.assignNodeMetadata(samples);
+        this.quantizationError = this.calculateQuantizationError(samples);
+
+        if (typeof onProgress === "function") {
+          onProgress({
+            iteration: this.iterations,
+            total: this.iterations,
+            progress: 1
+          });
+        }
+
+        return {
+          samples: samples.length,
+          quantizationError: this.quantizationError
+        };
       }
 
-      assignNodeMetadata(samples) {
-        for (const node of this.nodes) {
-          node.hits = 0;
-          node.averageRisk = 0;
-        }
+      trainOneIteration(input, iteration) {
+        const progress = iteration / Math.max(1, this.iterations - 1);
 
-        for (const sample of samples) {
-          const result = this.findBMU(sample.vector);
-          const node = result.node;
+        const learningRate =
+          this.initialLearningRate *
+          Math.pow(this.finalLearningRate / this.initialLearningRate, progress);
 
-          node.hits += 1;
-          node.averageRisk += sample.riskScore;
-        }
+        const radius =
+          this.initialRadius *
+          Math.pow(this.finalRadius / this.initialRadius, progress);
 
-        for (const node of this.nodes) {
-          if (node.hits > 0) {
-            node.averageRisk /= node.hits;
+        const radiusSquared = radius * radius;
+        const bmu = this.findBMU(input);
+
+        for (let nodeIndex = 0; nodeIndex < this.nodeCount; nodeIndex++) {
+          const dx = this.nodeX[nodeIndex] - bmu.x;
+          const dy = this.nodeY[nodeIndex] - bmu.y;
+          const gridDistanceSquared = dx * dx + dy * dy;
+
+          if (gridDistanceSquared <= radiusSquared) {
+            const influence = Math.exp(-gridDistanceSquared / (2 * radiusSquared));
+            const adapt = learningRate * influence;
+            const offset = nodeIndex * this.inputSize;
+
+            for (let i = 0; i < this.inputSize; i++) {
+              const currentWeight = this.weights[offset + i];
+              this.weights[offset + i] =
+                currentWeight + adapt * (input[i] - currentWeight);
+            }
           }
         }
       }
 
-      predict(input) {
-        const result = this.findBMU(input);
-        const familiarity = 1 / (1 + result.distance);
+      assignNodeMetadata(samples) {
+        this.hits.fill(0);
+        this.averageRisk.fill(0);
+
+        for (const sample of samples) {
+          const bmu = this.findBMU(sample.vector);
+          this.hits[bmu.index] += 1;
+          this.averageRisk[bmu.index] += sample.riskScore;
+        }
+
+        for (let i = 0; i < this.nodeCount; i++) {
+          if (this.hits[i] > 0) {
+            this.averageRisk[i] /= this.hits[i];
+          }
+        }
+      }
+
+      calculateQuantizationError(samples) {
+        if (!samples.length) return 1;
+
+        let total = 0;
+
+        for (const sample of samples) {
+          const bmu = this.findBMU(sample.vector);
+          total += bmu.distance;
+        }
+
+        return total / samples.length;
+      }
+
+      predict(rawInput) {
+        const input = this.normalizeVector(rawInput);
+        const bmu = this.findBMU(input);
+
+        const baseline = Math.max(this.quantizationError, 0.001);
+        let familiarity = Math.exp(-bmu.distance / baseline);
+
+        if (this.hits[bmu.index] === 0) {
+          familiarity *= 0.55;
+        }
+
+        familiarity = Math.min(1, Math.max(0, familiarity));
 
         return {
-          x: result.node.x,
-          y: result.node.y,
-          distance: result.distance,
-          hits: result.node.hits,
-          averageRisk: result.node.averageRisk,
+          index: bmu.index,
+          x: bmu.x,
+          y: bmu.y,
+          distance: bmu.distance,
+          hits: this.hits[bmu.index],
+          averageRisk: this.averageRisk[bmu.index],
           familiarity
         };
       }
 
-      euclideanDistance(a, b) {
-        let sum = 0;
-
-        for (let i = 0; i < a.length; i++) {
-          const diff = a[i] - b[i];
-          sum += diff * diff;
-        }
-
-        return Math.sqrt(sum);
-      }
-
       toJSON() {
         return {
+          version: 2,
+          type: "EfficientSelfOrganizingMap",
           width: this.width,
           height: this.height,
           inputSize: this.inputSize,
+          nodeCount: this.nodeCount,
           initialLearningRate: this.initialLearningRate,
+          finalLearningRate: this.finalLearningRate,
           initialRadius: this.initialRadius,
+          finalRadius: this.finalRadius,
           iterations: this.iterations,
-          nodes: this.nodes
+          quantizationError: this.quantizationError,
+          featureMean: Array.from(this.featureMean),
+          featureStd: Array.from(this.featureStd),
+          weights: Array.from(this.weights),
+          hits: Array.from(this.hits),
+          averageRisk: Array.from(this.averageRisk)
         };
       }
 
       static fromJSON(json) {
-        const som = new SelfOrganizingMap(
+        const som = new EfficientSelfOrganizingMap(
           json.width,
           json.height,
           json.inputSize,
           {
             learningRate: json.initialLearningRate,
+            finalLearningRate: json.finalLearningRate,
             radius: json.initialRadius,
+            finalRadius: json.finalRadius,
             iterations: json.iterations
           }
         );
 
-        som.nodes = json.nodes;
+        som.quantizationError = json.quantizationError ?? 1;
+        som.featureMean = new Float32Array(json.featureMean);
+        som.featureStd = new Float32Array(json.featureStd);
+        som.weights = new Float32Array(json.weights);
+        som.hits = new Uint32Array(json.hits);
+        som.averageRisk = new Float32Array(json.averageRisk);
 
         return som;
       }
@@ -665,6 +780,8 @@
     const sampleCount = document.getElementById("sampleCount");
     const learningCount = document.getElementById("learningCount");
     const somFamiliarity = document.getElementById("somFamiliarity");
+    const somError = document.getElementById("somError");
+    const somHits = document.getElementById("somHits");
     const objectList = document.getElementById("objectList");
     const speechState = document.getElementById("speechState");
     const logBox = document.getElementById("logBox");
@@ -678,6 +795,7 @@
     let isNavigating = false;
     let learningMode = false;
     let speechEnabled = true;
+    let isTrainingSOM = false;
 
     let detectionAnimationId = null;
     let recordIntervalId = null;
@@ -692,6 +810,11 @@
     let lastSpokenAt = 0;
     let lastTimestamp = null;
 
+    let smoothedFeatureVector = null;
+    let lastLearningVector = null;
+
+    const FEATURE_SMOOTHING_ALPHA = 0.22;
+    const MIN_SAMPLE_DISTANCE = 0.12;
     const SOM_INPUT_SIZE = 17;
 
     let currentMotion = {
@@ -772,17 +895,11 @@
         log("Camera API not available.");
       }
 
-      if (window.tf) {
-        log("TensorFlow.js script loaded.");
-      } else {
-        log("TensorFlow.js script not loaded.");
-      }
+      if (window.tf) log("TensorFlow.js script loaded.");
+      else log("TensorFlow.js script not loaded.");
 
-      if (window.cocoSsd) {
-        log("COCO-SSD script loaded.");
-      } else {
-        log("COCO-SSD script not loaded.");
-      }
+      if (window.cocoSsd) log("COCO-SSD script loaded.");
+      else log("COCO-SSD script not loaded.");
     }
 
     async function startCamera() {
@@ -791,16 +908,12 @@
       try {
         stopCameraOnly();
 
-        const constraints = {
-          audio: false,
-          video: {
-            facingMode: currentFacingMode
-          }
-        };
-
         try {
-          stream = await navigator.mediaDevices.getUserMedia(constraints);
-        } catch (strictError) {
+          stream = await navigator.mediaDevices.getUserMedia({
+            audio: false,
+            video: { facingMode: currentFacingMode }
+          });
+        } catch {
           log("Selected camera failed. Trying simple video mode...");
           stream = await navigator.mediaDevices.getUserMedia({
             audio: false,
@@ -818,7 +931,6 @@
         isCameraReady = true;
 
         resizeOverlay();
-
         window.addEventListener("resize", resizeOverlay);
 
         setGuidance("CAMERA READY", "Now press Load AI.", "safe");
@@ -826,17 +938,8 @@
         log("Video size: " + video.videoWidth + " x " + video.videoHeight);
       } catch (error) {
         isCameraReady = false;
-
         setGuidance("CAMERA BLOCKED", error.name + ": " + error.message, "danger");
-
-        log("Camera failed.");
-        log("Name: " + error.name);
-        log("Message: " + error.message);
-
-        if (error.name === "NotAllowedError") {
-          log("Fix: allow Camera permission in iPhone Settings > Safari > Camera.");
-          log("Use Safari and the GitHub Pages HTTPS link.");
-        }
+        log("Camera failed: " + error.name + " — " + error.message);
       }
     }
 
@@ -859,21 +962,14 @@
       setLog("Loading AI model...");
 
       try {
-        if (!window.tf) {
-          throw new Error("TensorFlow.js did not load.");
-        }
-
-        if (!window.cocoSsd) {
-          throw new Error("COCO-SSD did not load.");
-        }
+        if (!window.tf) throw new Error("TensorFlow.js did not load.");
+        if (!window.cocoSsd) throw new Error("COCO-SSD did not load.");
 
         await tf.ready();
 
         log("TensorFlow backend: " + tf.getBackend());
 
-        model = await cocoSsd.load({
-          base: "lite_mobilenet_v2"
-        });
+        model = await cocoSsd.load({ base: "lite_mobilenet_v2" });
 
         modelBadge.textContent = "AI: ready";
         modelBadge.style.color = "var(--green)";
@@ -888,12 +984,8 @@
         model = null;
         modelBadge.textContent = "AI: failed";
         modelBadge.style.color = "var(--red)";
-
         setGuidance("AI FAILED", error.message, "danger");
-
-        log("AI model failed.");
-        log("Name: " + error.name);
-        log("Message: " + error.message);
+        log("AI model failed: " + error.message);
       }
     }
 
@@ -929,18 +1021,29 @@
     function startNavigation() {
       if (!isCameraReady) {
         setGuidance("NO CAMERA", "Press Camera first.", "warning");
-        log("Navigation not started: camera is not ready.");
         return;
       }
 
       if (!model) {
         setGuidance("NO AI", "Press Load AI first.", "warning");
-        log("Navigation not started: AI model is not loaded.");
         return;
       }
 
       isNavigating = true;
+      learningMode = false;
 
+      startSensorListeners();
+
+      clearInterval(recordIntervalId);
+      recordIntervalId = setInterval(recordSample, 300);
+
+      startDetection();
+
+      setGuidance("NAVIGATING", "Using object detection and SOM memory if loaded.", "safe");
+      log("Navigation started.");
+    }
+
+    function startSensorListeners() {
       window.addEventListener("devicemotion", handleMotion);
       window.addEventListener("deviceorientation", handleOrientation);
 
@@ -955,14 +1058,6 @@
           }
         );
       }
-
-      clearInterval(recordIntervalId);
-      recordIntervalId = setInterval(recordSample, 300);
-
-      startDetection();
-
-      setGuidance("NAVIGATING", "Move slowly. Keep camera facing forward.", "safe");
-      log("Navigation started.");
     }
 
     function stopNavigation() {
@@ -1003,13 +1098,7 @@
     }
 
     function startDetection() {
-      if (!isCameraReady || !model) {
-        return;
-      }
-
-      if (isDetecting) {
-        return;
-      }
+      if (!isCameraReady || !model || isDetecting) return;
 
       isDetecting = true;
       detectLoop();
@@ -1017,9 +1106,7 @@
     }
 
     async function detectLoop() {
-      if (!isDetecting) {
-        return;
-      }
+      if (!isDetecting) return;
 
       try {
         if (video.readyState >= 2) {
@@ -1053,12 +1140,12 @@
       objectList.innerHTML = "";
 
       valid.slice(0, 8).forEach(prediction => {
-        const box = prediction.bbox;
+        const [bx, by, bw, bh] = prediction.bbox;
 
-        const x = box[0] * scaleX;
-        const y = box[1] * scaleY;
-        const width = box[2] * scaleX;
-        const height = box[3] * scaleY;
+        const x = bx * scaleX;
+        const y = by * scaleY;
+        const width = bw * scaleX;
+        const height = bh * scaleY;
 
         const isRisky = riskyObjects.has(prediction.class);
         const color = isRisky ? "#ff4d6d" : "#2ee59d";
@@ -1083,7 +1170,6 @@
         pill.innerHTML =
           "<span>" + prediction.class + "</span>" +
           "<em>" + Math.round(prediction.score * 100) + "%</em>";
-
         objectList.appendChild(pill);
       });
     }
@@ -1104,29 +1190,16 @@
       };
 
       for (const prediction of valid) {
-        const box = prediction.bbox;
-        const x = box[0];
-        const y = box[1];
-        const width = box[2];
-        const height = box[3];
+        const [x, y, width, height] = prediction.bbox;
 
         const centerX = x + width / 2;
         const bottomY = y + height;
         const boxAreaRatio = (width * height) / frameArea;
 
-        const isCenter =
-          centerX > videoWidth * 0.30 &&
-          centerX < videoWidth * 0.70;
-
-        const isLow =
-          bottomY > videoHeight * 0.48;
-
-        const isVeryLarge =
-          boxAreaRatio > 0.18;
-
-        const isMediumLarge =
-          boxAreaRatio > 0.08;
-
+        const isCenter = centerX > videoWidth * 0.30 && centerX < videoWidth * 0.70;
+        const isLow = bottomY > videoHeight * 0.48;
+        const isVeryLarge = boxAreaRatio > 0.18;
+        const isMediumLarge = boxAreaRatio > 0.08;
         const isRisky = riskyObjects.has(prediction.class);
 
         if (isRisky && isCenter && isLow && isVeryLarge) {
@@ -1158,9 +1231,19 @@
           decision = {
             level: "MEDIUM",
             message: "CAREFUL",
-            subtext: "Unfamiliar area. SOM familiarity: " + somDecision.familiarity.toFixed(2),
+            subtext: "Unfamiliar state. Familiarity: " + somDecision.familiarity.toFixed(2),
             type: "warning",
-            speak: "Careful. Unfamiliar area."
+            speak: "Careful. Unfamiliar room state."
+          };
+        }
+
+        if (somDecision.status === "UNCERTAIN") {
+          decision = {
+            level: "MEDIUM",
+            message: "CHECK",
+            subtext: "Partly familiar state. Familiarity: " + somDecision.familiarity.toFixed(2),
+            type: "warning",
+            speak: "Partly familiar area. Move slowly."
           };
         }
 
@@ -1170,7 +1253,7 @@
             message: "STOP",
             subtext: "This zone was learned as risky.",
             type: "danger",
-            speak: "Stop. Risky learned zone."
+            speak: "Stop. Learned risky zone."
           };
         }
       }
@@ -1186,7 +1269,6 @@
     function startLearningRoom() {
       if (!isCameraReady || !model) {
         setGuidance("NOT READY", "Start camera and load AI first.", "warning");
-        log("Learning not started: camera or AI not ready.");
         return;
       }
 
@@ -1194,115 +1276,148 @@
       isNavigating = true;
       data = [];
       somSamples = [];
+      smoothedFeatureVector = null;
+      lastLearningVector = null;
+
+      sampleCount.textContent = "0";
+      learningCount.textContent = "0";
 
       resetPath();
-
-      window.addEventListener("devicemotion", handleMotion);
-      window.addEventListener("deviceorientation", handleOrientation);
-
-      if ("geolocation" in navigator) {
-        gpsWatchId = navigator.geolocation.watchPosition(
-          handleGPS,
-          handleGPSError,
-          {
-            enableHighAccuracy: true,
-            maximumAge: 1000,
-            timeout: 5000
-          }
-        );
-      }
+      startSensorListeners();
 
       clearInterval(recordIntervalId);
       recordIntervalId = setInterval(recordSample, 300);
 
       startDetection();
 
-      setGuidance("LEARNING ROOM", "Walk slowly around the room.", "safe");
+      setGuidance("LEARNING ROOM", "Walk slowly. Useful samples only will be stored.", "safe");
       log("Room learning started.");
     }
 
     function stopLearningRoom() {
       learningMode = false;
-
-      setGuidance("LEARNING STOPPED", "Samples collected: " + somSamples.length, "warning");
-      log("Room learning stopped. Samples: " + somSamples.length);
+      setGuidance("LEARNING STOPPED", "Useful samples collected: " + somSamples.length, "warning");
+      log("Room learning stopped. Useful samples: " + somSamples.length);
     }
 
-    function trainSOMFromRoom() {
+    async function trainSOMFromRoom() {
+      if (isTrainingSOM) {
+        log("SOM training already running.");
+        return;
+      }
+
       if (somSamples.length < 50) {
-        setGuidance("MORE DATA NEEDED", "Collect at least 50 learning samples.", "warning");
+        setGuidance("MORE DATA NEEDED", "Collect at least 50 useful learning samples.", "warning");
         log("Not enough SOM samples. Current: " + somSamples.length);
         return;
       }
 
       try {
-        setGuidance("TRAINING SOM", "Training in browser...", "warning");
-        log("Training SOM with " + somSamples.length + " samples.");
+        isTrainingSOM = true;
 
-        trainedSOM = new SelfOrganizingMap(12, 12, SOM_INPUT_SIZE, {
-          learningRate: 0.45,
-          radius: 6,
-          iterations: 1500
+        setGuidance("TRAINING SOM", "Training efficiently in browser...", "warning");
+        log("Training efficient SOM with " + somSamples.length + " samples.");
+
+        const mapSize = chooseSOMSize(somSamples.length);
+        const iterations = Math.min(3000, Math.max(900, somSamples.length * 12));
+
+        trainedSOM = new EfficientSelfOrganizingMap(
+          mapSize.width,
+          mapSize.height,
+          SOM_INPUT_SIZE,
+          {
+            learningRate: 0.35,
+            finalLearningRate: 0.04,
+            radius: Math.max(mapSize.width, mapSize.height) * 0.5,
+            finalRadius: 1,
+            iterations
+          }
+        );
+
+        let lastPercent = -1;
+
+        const result = await trainedSOM.trainAsync(somSamples, progress => {
+          const percent = Math.round(progress.progress * 100);
+
+          if (percent !== lastPercent && percent % 10 === 0) {
+            lastPercent = percent;
+            setGuidance("TRAINING SOM", percent + "% complete", "warning");
+            log("SOM training: " + percent + "%");
+          }
         });
-
-        trainedSOM.train(somSamples);
 
         somBadge.textContent = "SOM: ready";
         somBadge.style.color = "var(--green)";
+        somError.textContent = result.quantizationError.toFixed(3);
 
         drawSOM();
 
-        setGuidance("SOM READY", "The room pattern has been learned.", "safe");
-        log("SOM training completed.");
+        setGuidance(
+          "SOM READY",
+          "Error: " + result.quantizationError.toFixed(3) + " | Samples: " + result.samples,
+          "safe"
+        );
+
+        log("Efficient SOM training completed.");
+        log("Map size: " + mapSize.width + " x " + mapSize.height);
+        log("Iterations: " + iterations);
+        log("Quantization error: " + result.quantizationError.toFixed(4));
       } catch (error) {
         trainedSOM = null;
         somBadge.textContent = "SOM: failed";
         somBadge.style.color = "var(--red)";
-
         setGuidance("SOM ERROR", error.message, "danger");
         log("SOM training failed: " + error.message);
+      } finally {
+        isTrainingSOM = false;
       }
+    }
+
+    function chooseSOMSize(sampleCount) {
+      if (sampleCount >= 900) return { width: 14, height: 14 };
+      if (sampleCount >= 400) return { width: 12, height: 12 };
+      if (sampleCount >= 150) return { width: 10, height: 10 };
+      return { width: 8, height: 8 };
     }
 
     function evaluateSOMNavigation() {
       if (!trainedSOM) {
         latestSOMResult = null;
         somFamiliarity.textContent = "—";
+        somHits.textContent = "—";
         return null;
       }
 
-      const vector = createRoomFeatureVector();
+      const vector = createSmoothedRoomFeatureVector();
       const prediction = trainedSOM.predict(vector);
 
       latestSOMResult = prediction;
       somFamiliarity.textContent = prediction.familiarity.toFixed(2);
+      somHits.textContent = String(prediction.hits);
+      somError.textContent = trainedSOM.quantizationError.toFixed(3);
 
       drawSOM();
 
       let status = "KNOWN";
-      let message = "Known room area";
-      let type = "safe";
 
-      if (prediction.familiarity < 0.55 || prediction.hits === 0) {
+      if (prediction.familiarity < 0.35 || prediction.hits === 0) {
         status = "UNKNOWN";
-        message = "Unfamiliar room state";
-        type = "warning";
+      } else if (prediction.familiarity < 0.55) {
+        status = "UNCERTAIN";
       }
 
-      if (prediction.averageRisk > 0.65) {
+      if (prediction.averageRisk > 0.65 && prediction.hits > 0) {
         status = "RISKY_ZONE";
-        message = "This area was learned as risky";
-        type = "danger";
       }
 
       return {
         status,
-        message,
-        type,
         familiarity: prediction.familiarity,
         somX: prediction.x,
         somY: prediction.y,
-        averageRisk: prediction.averageRisk
+        averageRisk: prediction.averageRisk,
+        hits: prediction.hits,
+        distance: prediction.distance
       };
     }
 
@@ -1349,10 +1464,7 @@
       };
 
       for (const prediction of validPredictions) {
-        const box = prediction.bbox;
-        const x = box[0];
-        const width = box[2];
-        const height = box[3];
+        const [x, , width, height] = prediction.bbox;
 
         const centerX = x + width / 2;
         const areaRatio = clamp((width * height) / frameArea, 0, 1);
@@ -1367,10 +1479,7 @@
         }
 
         if (prediction.class in classScores) {
-          classScores[prediction.class] = Math.max(
-            classScores[prediction.class],
-            prediction.score
-          );
+          classScores[prediction.class] = Math.max(classScores[prediction.class], prediction.score);
         }
       }
 
@@ -1378,16 +1487,12 @@
         heading,
         accelerationNorm,
         gyroNorm,
-
         xNorm,
         yNorm,
-
         objectCountNorm,
-
         clamp(centerObstacleScore * 4, 0, 1),
         clamp(leftObstacleScore * 4, 0, 1),
         clamp(rightObstacleScore * 4, 0, 1),
-
         classScores.person,
         classScores.chair,
         classScores.couch,
@@ -1399,10 +1504,48 @@
       ];
     }
 
-    function recordSample() {
-      if (!isNavigating && !learningMode) {
-        return;
+    function createSmoothedRoomFeatureVector() {
+      const rawVector = createRoomFeatureVector();
+
+      if (!smoothedFeatureVector) {
+        smoothedFeatureVector = rawVector.slice();
+        return smoothedFeatureVector.slice();
       }
+
+      for (let i = 0; i < rawVector.length; i++) {
+        smoothedFeatureVector[i] =
+          smoothedFeatureVector[i] * (1 - FEATURE_SMOOTHING_ALPHA) +
+          rawVector[i] * FEATURE_SMOOTHING_ALPHA;
+      }
+
+      return smoothedFeatureVector.slice();
+    }
+
+    function shouldStoreLearningSample(vector) {
+      if (!lastLearningVector) {
+        lastLearningVector = vector.slice();
+        return true;
+      }
+
+      let sum = 0;
+
+      for (let i = 0; i < vector.length; i++) {
+        const diff = vector[i] - lastLearningVector[i];
+        sum += diff * diff;
+      }
+
+      const distance = Math.sqrt(sum);
+
+      if (distance >= MIN_SAMPLE_DISTANCE) {
+        lastLearningVector = vector.slice();
+        return true;
+      }
+
+      return false;
+    }
+
+    function recordSample() {
+      if (!isNavigating && !learningMode) return;
 
       const now = Date.now();
 
@@ -1423,25 +1566,20 @@
 
       const nearestRiskObject = getNearestRiskObject();
 
-      let currentRiskText = riskLevel.textContent;
+      const currentRiskText = riskLevel.textContent;
       let riskScore = 0;
 
-      if (currentRiskText === "MEDIUM") {
-        riskScore = 0.5;
-      }
+      if (currentRiskText === "MEDIUM") riskScore = 0.5;
+      if (currentRiskText === "HIGH") riskScore = 1;
 
-      if (currentRiskText === "HIGH") {
-        riskScore = 1;
-      }
-
-      const vector = createRoomFeatureVector();
+      const vector = createSmoothedRoomFeatureVector();
 
       data.push({
         timestamp: now,
-        ax: ax,
-        ay: ay,
-        az: az,
-        accelerationMagnitude: accelerationMagnitude,
+        ax,
+        ay,
+        az,
+        accelerationMagnitude,
         gx: currentMotion.gx,
         gy: currentMotion.gy,
         gz: currentMotion.gz,
@@ -1453,23 +1591,25 @@
         accuracy: currentPosition.accuracy,
         estimatedX: currentX,
         estimatedY: currentY,
-        detectedObjects: detectedObjects,
-        nearestRiskObject: nearestRiskObject,
+        detectedObjects,
+        nearestRiskObject,
         riskLevel: currentRiskText,
         somFamiliarity: latestSOMResult ? latestSOMResult.familiarity : "",
         somX: latestSOMResult ? latestSOMResult.x : "",
         somY: latestSOMResult ? latestSOMResult.y : "",
+        somHits: latestSOMResult ? latestSOMResult.hits : "",
+        somDistance: latestSOMResult ? latestSOMResult.distance : "",
         featureVector: vector.join("|")
       });
 
-      if (learningMode) {
+      if (learningMode && shouldStoreLearningSample(vector)) {
         somSamples.push({
           timestamp: now,
-          vector: vector,
-          riskScore: riskScore,
+          vector,
+          riskScore,
           estimatedX: currentX,
           estimatedY: currentY,
-          detectedObjects: detectedObjects,
+          detectedObjects,
           riskLevel: currentRiskText
         });
 
@@ -1487,20 +1627,16 @@
       const candidates = latestPredictions
         .filter(prediction => prediction.score >= 0.45 && riskyObjects.has(prediction.class))
         .map(prediction => {
-          const box = prediction.bbox;
-          const areaRatio = (box[2] * box[3]) / frameArea;
-
+          const [, , width, height] = prediction.bbox;
           return {
             className: prediction.class,
             score: prediction.score,
-            areaRatio: areaRatio
+            areaRatio: (width * height) / frameArea
           };
         })
         .sort((a, b) => b.areaRatio - a.areaRatio);
 
-      if (candidates.length === 0) {
-        return "";
-      }
+      if (candidates.length === 0) return "";
 
       const top = candidates[0];
       return top.className + ":" + top.areaRatio.toFixed(3);
@@ -1518,9 +1654,7 @@
 
       const movementIntensity = Math.abs(accMag - 9.81);
 
-      if (movementIntensity < 0.8) {
-        return;
-      }
+      if (movementIntensity < 0.8) return;
 
       const stepLength = Math.min(5, Math.max(1.5, movementIntensity * 1.15));
       const headingRad = headingDegrees * Math.PI / 180;
@@ -1531,20 +1665,13 @@
       currentX = clamp(currentX, 8, pathCanvas.width - 8);
       currentY = clamp(currentY, 8, pathCanvas.height - 8);
 
-      estimatedPath.push({
-        x: currentX,
-        y: currentY
-      });
+      estimatedPath.push({ x: currentX, y: currentY });
 
-      if (estimatedPath.length > 1000) {
-        estimatedPath.shift();
-      }
+      if (estimatedPath.length > 1000) estimatedPath.shift();
     }
 
     function handleMotion(event) {
-      if (!isNavigating && !learningMode) {
-        return;
-      }
+      if (!isNavigating && !learningMode) return;
 
       if (event.accelerationIncludingGravity) {
         currentMotion.ax = event.accelerationIncludingGravity.x || 0;
@@ -1560,9 +1687,7 @@
     }
 
     function handleOrientation(event) {
-      if (!isNavigating && !learningMode) {
-        return;
-      }
+      if (!isNavigating && !learningMode) return;
 
       currentOrientation.alpha = event.alpha || 0;
       currentOrientation.beta = event.beta || 0;
@@ -1636,31 +1761,40 @@
       if (!trainedSOM) {
         somCtx.fillStyle = "#a7b0c8";
         somCtx.font = "16px Arial";
-        somCtx.fillText("SOM map will appear here after training.", 18, 34);
+        somCtx.fillText("Efficient SOM map will appear here after training.", 18, 34);
         return;
       }
 
       const cellW = somCanvas.width / trainedSOM.width;
       const cellH = somCanvas.height / trainedSOM.height;
 
-      for (const node of trainedSOM.nodes) {
-        const x = node.x * cellW;
-        const y = node.y * cellH;
+      let maxHits = 1;
 
-        const hitIntensity = clamp(node.hits / 20, 0, 1);
-        const risk = clamp(node.averageRisk, 0, 1);
+      for (let i = 0; i < trainedSOM.nodeCount; i++) {
+        maxHits = Math.max(maxHits, trainedSOM.hits[i]);
+      }
 
-        const red = Math.round(255 * risk);
-        const green = Math.round(180 * (1 - risk));
-        const blue = Math.round(120 + 100 * hitIntensity);
+      for (let i = 0; i < trainedSOM.nodeCount; i++) {
+        const xIndex = trainedSOM.nodeX[i];
+        const yIndex = trainedSOM.nodeY[i];
 
-        somCtx.fillStyle = "rgba(" + red + "," + green + "," + blue + ",0.75)";
+        const x = xIndex * cellW;
+        const y = yIndex * cellH;
+
+        const hitIntensity = trainedSOM.hits[i] / maxHits;
+        const risk = clamp(trainedSOM.averageRisk[i], 0, 1);
+
+        const red = Math.round(255 * risk + 40 * (1 - hitIntensity));
+        const green = Math.round(210 * (1 - risk));
+        const blue = Math.round(90 + 140 * hitIntensity);
+
+        somCtx.fillStyle = "rgba(" + red + "," + green + "," + blue + ",0.78)";
         somCtx.fillRect(x + 1, y + 1, cellW - 2, cellH - 2);
 
-        if (node.hits > 0) {
-          somCtx.fillStyle = "rgba(255,255,255,0.85)";
+        if (trainedSOM.hits[i] > 0) {
+          somCtx.fillStyle = "rgba(255,255,255,0.88)";
           somCtx.font = "10px Arial";
-          somCtx.fillText(String(node.hits), x + 4, y + 12);
+          somCtx.fillText(String(trainedSOM.hits[i]), x + 4, y + 12);
         }
       }
 
@@ -1669,7 +1803,7 @@
         const cy = latestSOMResult.y * cellH + cellH / 2;
 
         somCtx.beginPath();
-        somCtx.arc(cx, cy, Math.min(cellW, cellH) * 0.35, 0, Math.PI * 2);
+        somCtx.arc(cx, cy, Math.min(cellW, cellH) * 0.38, 0, Math.PI * 2);
         somCtx.strokeStyle = "#ffffff";
         somCtx.lineWidth = 3;
         somCtx.stroke();
@@ -1679,6 +1813,10 @@
         somCtx.fillStyle = "#ffffff";
         somCtx.fill();
       }
+
+      somCtx.fillStyle = "#a7b0c8";
+      somCtx.font = "12px Arial";
+      somCtx.fillText("QE: " + trainedSOM.quantizationError.toFixed(3), 12, somCanvas.height - 12);
     }
 
     function drawPoint(ctx, x, y, color, radius) {
@@ -1717,20 +1855,13 @@
     }
 
     function maybeSpeak(text, level) {
-      if (!speechEnabled) {
-        return;
-      }
-
-      if (!("speechSynthesis" in window)) {
-        return;
-      }
+      if (!speechEnabled) return;
+      if (!("speechSynthesis" in window)) return;
 
       const now = Date.now();
       const cooldown = level === "HIGH" ? 1600 : 3500;
 
-      if (now - lastSpokenAt < cooldown) {
-        return;
-      }
+      if (now - lastSpokenAt < cooldown) return;
 
       lastSpokenAt = now;
 
@@ -1771,17 +1902,15 @@
         return;
       }
 
-      const rows = somSamples.map(sample => {
-        return {
-          timestamp: sample.timestamp,
-          estimatedX: sample.estimatedX,
-          estimatedY: sample.estimatedY,
-          detectedObjects: sample.detectedObjects,
-          riskLevel: sample.riskLevel,
-          riskScore: sample.riskScore,
-          vector: sample.vector.join("|")
-        };
-      });
+      const rows = somSamples.map(sample => ({
+        timestamp: sample.timestamp,
+        estimatedX: sample.estimatedX,
+        estimatedY: sample.estimatedY,
+        detectedObjects: sample.detectedObjects,
+        riskLevel: sample.riskLevel,
+        riskScore: sample.riskScore,
+        vector: sample.vector.join("|")
+      }));
 
       downloadRowsAsCSV(rows, "room_learning_som_samples.csv");
       log("Learning CSV downloaded.");
@@ -1792,11 +1921,7 @@
 
       const csvRows = [
         headers.join(","),
-        ...rows.map(row => {
-          return headers
-            .map(header => csvEscape(row[header]))
-            .join(",");
-        })
+        ...rows.map(row => headers.map(header => csvEscape(row[header])).join(","))
       ];
 
       const blob = new Blob([csvRows.join("\n")], {
@@ -1828,10 +1953,9 @@
         som: trainedSOM.toJSON()
       };
 
-      const blob = new Blob(
-        [JSON.stringify(payload, null, 2)],
-        { type: "application/json" }
-      );
+      const blob = new Blob([JSON.stringify(payload, null, 2)], {
+        type: "application/json"
+      });
 
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -1848,9 +1972,7 @@
     }
 
     function loadSOMFromFile(file) {
-      if (!file) {
-        return;
-      }
+      if (!file) return;
 
       const reader = new FileReader();
 
@@ -1858,10 +1980,11 @@
         try {
           const payload = JSON.parse(event.target.result);
 
-          trainedSOM = SelfOrganizingMap.fromJSON(payload.som);
+          trainedSOM = EfficientSelfOrganizingMap.fromJSON(payload.som);
 
           somBadge.textContent = "SOM: loaded";
           somBadge.style.color = "var(--green)";
+          somError.textContent = trainedSOM.quantizationError.toFixed(3);
 
           drawSOM();
 
@@ -1871,7 +1994,6 @@
           trainedSOM = null;
           somBadge.textContent = "SOM: load failed";
           somBadge.style.color = "var(--red)";
-
           setGuidance("LOAD FAILED", error.message, "danger");
           log("Failed to load SOM: " + error.message);
         }
